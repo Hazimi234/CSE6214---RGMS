@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>HOD Dashboard - RGMS</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-leaf"></i> RGMS HOD</div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="{{ url_for('hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="#"><i class="fas fa-thumbs-up"></i> Assigned Proposals</a></li>
+                <li><a href="#"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
+                <li><a href="#"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
+                <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Budget</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>HOD Dashboard</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="text-align: right;">
+                        <span style="display: block; font-weight: bold;">{{ user.name }}</span>
+                        <small style="color: #666;">HOD</small>
+                    </div>
+                    <a href="{{ url_for('hod_profile') }}">
+                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}" alt="Profile"
+                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                    </a>
+                </div>
+            </div>
+            <div class="content-wrapper">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.approvals_pending }}</h3>
+                            <p>Approvals Pending</p>
+                        </div>
+                        <i class="fas fa-gavel stat-icon"></i>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.budget_allocated }}</h3>
+                            <p>Funds Allocated</p>
+                        </div>
+                        <i class="fas fa-coins stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

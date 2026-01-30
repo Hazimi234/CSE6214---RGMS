@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Researcher Dashboard - RGMS</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-leaf"></i> RGMS RESEARCHER</div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="{{ url_for('researcher_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="#"><i class="fas fa-file-upload"></i> Proposal Submission</a></li>
+                <li><a href="#"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li><a href="#"><i class="fas fa-tasks"></i> My Submissions</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Researcher Dashboard</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="text-align: right;">
+                        <span style="display: block; font-weight: bold;">{{ user.name }}</span>
+                        <small style="color: #666;">Researcher</small>
+                    </div>
+                    <a href="{{ url_for('researcher_profile') }}">
+                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}" alt="Profile"
+                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                    </a>
+                </div>
+            </div>
+            <div class="content-wrapper">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.my_proposals }}</h3>
+                            <p>Submitted Proposals</p>
+                        </div>
+                        <i class="fas fa-file-alt stat-icon"></i>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.active_grants }}</h3>
+                            <p>Active Grants</p>
+                        </div>
+                        <i class="fas fa-award stat-icon"></i>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.pending_reports }}</h3>
+                            <p>Reports Due</p>
+                        </div>
+                        <i class="fas fa-clock stat-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

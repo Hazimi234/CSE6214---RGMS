@@ -3,20 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RGMS - Select Role</title>
+    <title>RGMS Portal</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="body-login">
-    <div class="login-container">
-        <h1>Research Grant Management System</h1>
-        <p>Please select your role to login:</p>
+    <div class="login-card">
+        <div class="logo-circle">
+            <i class="fas fa-leaf"></i> </div>
         
-        <div class="role-buttons">
-            <a href="{{ url_for('admin_login') }}" class="btn-role">Admin</a>
+        <h2>Welcome to RGMS</h2>
+        <p>Research Grant Management System</p>
+        
+        <p style="margin-top: 2rem; font-size: 0.9rem;">Select your role to continue:</p>
+
+        <div class="role-grid">
+            <a href="{{ url_for('admin_login') }}" class="btn-outline">
+                <i class="fas fa-user-shield"></i>
+                <span>Admin</span>
+            </a>
             
-            <a href="#" class="btn-role">Researcher</a>
-            <a href="#" class="btn-role">Reviewer</a>
-            <a href="#" class="btn-role">Head of Department (HOD)</a>
+            <a href="{{ url_for('researcher_login') }}" class="btn-outline">
+                <i class="fas fa-microscope"></i>
+                <span>Researcher</span>
+            </a>
+            
+            <a href="{{ url_for('reviewer_login') }}" class="btn-outline">
+                <i class="fas fa-tasks"></i>
+                <span>Reviewer</span>
+            </a>
+            
+            <a href="{{ url_for('hod_login') }}" class="btn-outline">
+                <i class="fas fa-building"></i>
+                <span>HOD</span>
+            </a>
         </div>
     </div>
 </body>

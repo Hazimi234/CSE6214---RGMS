@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - RGMS</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> RGMS ADMIN
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users"></i> User Management</a></li>
+                <li><a href="#"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
+                <li><a href="#"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
+                <li><a href="#"><i class="fas fa-file-contract"></i> Activity Log</a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> System Configuration</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Overview</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="text-align: right;">
+                        <span style="display: block; font-weight: bold;">{{ user.name }}</span>
+                        <small style="color: #da2525;">Admin</small>
+                    </div>
+                    <a href="{{ url_for('admin_profile') }}">
+                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}" alt="Profile"
+                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                    </a>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.pending_proposals }}</h3>
+                            <p>Pending Proposals</p>
+                        </div>
+                        <i class="fas fa-file-alt stat-icon"></i>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.active_grants }}</h3>
+                            <p>Active Grants</p>
+                        </div>
+                        <i class="fas fa-award stat-icon"></i>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>{{ stats.total_users }}</h3>
+                            <p>Total Users</p>
+                        </div>
+                        <i class="fas fa-users stat-icon"></i>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <h3 style="margin-top: 0; color: var(--primary-color);">Recent Activity</h3>
+                    <p>No recent activity found.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
