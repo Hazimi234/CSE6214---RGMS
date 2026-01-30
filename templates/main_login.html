@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGMS - Select Role</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="body-login">
+    <div class="login-container">
+        <h1>Research Grant Management System</h1>
+        <p>Please select your role to login:</p>
+        
+        <div class="role-buttons">
+            <a href="{{ url_for('admin_login') }}" class="btn-role">Admin</a>
+            
+            <a href="#" class="btn-role">Researcher</a>
+            <a href="#" class="btn-role">Reviewer</a>
+            <a href="#" class="btn-role">Head of Department (HOD)</a>
+        </div>
+    </div>
+</body>
+</html>
