@@ -12,14 +12,14 @@
     <div class="dashboard-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> RGMS ADMIN
+                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU
             </div>
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
                 <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li class="active"><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users"></i> User
                         Management</a></li>
-                <li><a href="#"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
                 <li><a href="#"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
                 <li><a href="#"><i class="fas fa-file-contract"></i> Activity Log</a></li>
                 <li><a href="#"><i class="fas fa-cog"></i> System Configuration</a></li>
@@ -172,9 +172,39 @@
                         </tbody>
                     </table>
                 </div>
+                <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px;">
 
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('admin_user_management', page=pagination.prev_num, search=request.args.get('search'), role=request.args.get('role'), faculty=request.args.get('faculty')) }}"
+                        class="btn-outline" style="padding: 8px 15px;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                    {% else %}
+                    <span class="btn-outline" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </span>
+                    {% endif %}
+
+                    <span style="font-weight: bold; color: #1b5e20;">
+                        Page {{ pagination.page }} of {{ pagination.pages }}
+                    </span>
+
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('admin_user_management', page=pagination.next_num, search=request.args.get('search'), role=request.args.get('role'), faculty=request.args.get('faculty')) }}"
+                        class="btn-outline" style="padding: 8px 15px;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% else %}
+                    <span class="btn-outline" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </span>
+                    {% endif %}
+
+                </div>
             </div>
+
         </div>
+    </div>
     </div>
 </body>
 

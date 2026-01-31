@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Assign Evaluators - RGMS</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="dashboard-container">
+    <div class="sidebar">
+        <div class="sidebar-header"><i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}"><i class="fas fa-arrow-left"></i> Cancel</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar"><h2>Assign Evaluators</h2> <span>{{ user.name }}</span></div>
+        <div class="content-wrapper">
+            <div class="login-card" style="max-width: 800px; margin: 0 auto; text-align: left;">
+                <h3 style="color: #1b5e20;">Assign for: {{ proposal.title }}</h3>
+                <p>Showing evaluators from Faculty: <strong>{{ proposal.researcher.user_info.faculty }}</strong></p>
+                <hr>
+
+                <form method="POST">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        
+                        <div>
+                            <h4 style="color: #1565c0;"><i class="fas fa-search"></i> 1. Select Reviewer</h4>
+                            <div class="form-group">
+                                <label>Available Reviewers</label>
+                                <select name="reviewer_id" style="width: 100%; padding: 10px;" required>
+                                    <option value="">-- Choose Reviewer --</option>
+                                    {% for r in reviewers %}
+                                    <option value="{{ r.reviewer_id }}" {% if proposal.assigned_reviewer_id == r.reviewer_id %}selected{% endif %}>
+                                        {{ r.user_info.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Review Deadline</label>
+                                <input type="date" name="reviewer_deadline" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style="color: #c62828;"><i class="fas fa-user-tie"></i> 2. Select HOD</h4>
+                            <div class="form-group">
+                                <label>Available HODs</label>
+                                <select name="hod_id" style="width: 100%; padding: 10px;" required>
+                                    <option value="">-- Choose HOD --</option>
+                                    {% for h in hods %}
+                                    <option value="{{ h.hod_id }}" {% if proposal.assigned_hod_id == h.hod_id %}selected{% endif %}>
+                                        {{ h.user_info.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Approval Deadline</label>
+                                <input type="date" name="hod_deadline" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="margin-top: 20px;">Confirm & Assign</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -13,13 +13,13 @@
     <div class="dashboard-container">
         <div class="sidebar">
             <div class="sidebar-header">
-                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> RGMS ADMIN</div>
+                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
                 <li class="active"><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My
                         Account</a></li>
                 <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users"></i> User Management</a></li>
-                <li><a href="#"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
                 <li><a href="#"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
                 <li><a href="#"><i class="fas fa-file-contract"></i> Activity Log</a></li>
                 <li><a href="#"><i class="fas fa-cog"></i> System Configuration</a></li>

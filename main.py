@@ -4,7 +4,18 @@ from flask import Flask, redirect, url_for, render_template, request, session, f
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
-from models import db, User, Admin, Researcher, Reviewer, HOD
+from datetime import datetime
+from models import (
+    db,
+    User,
+    Admin,
+    Researcher,
+    Reviewer,
+    HOD,
+    GrantCycle,
+    Proposal,
+    Deadline,
+)
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"
@@ -16,8 +27,30 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# NEW: Folder to save images
+# Folder to save images
 app.config["UPLOAD_FOLDER"] = os.path.join(basedir, "static/profile_pics")
+
+# Folder for Proposal Documents (PDFs)
+app.config["UPLOAD_FOLDER_DOCS"] = os.path.join(basedir, "static/proposal_docs")
+app.config["ALLOWED_EXTENSIONS"] = {"pdf", "docx", "doc"}
+
+
+def allowed_file(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
+    )
+
+
+def save_document(form_file):
+    # Generates a random name for the document to avoid clashes
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_file.filename)
+    doc_fn = random_hex + f_ext
+    doc_path = os.path.join(app.config["UPLOAD_FOLDER_DOCS"], doc_fn)
+    form_file.save(doc_path)
+    return doc_fn
+
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -159,6 +192,10 @@ def admin_user_management():
     filter_role = request.args.get("role", "")
     filter_faculty = request.args.get("faculty", "")
 
+    # Pagination Parameters (Default to Page 1, 8 items per page)
+    page = request.args.get("page", 1, type=int)
+    per_page = 8
+
     # Start Query
     query = User.query
 
@@ -170,12 +207,15 @@ def admin_user_management():
     if filter_faculty:
         query = query.filter_by(faculty=filter_faculty)
 
-    # Execute Query
-    users = query.all()
+    # Execute Query with Pagination
+    # error_out=False means if we go to a page that doesn't exist, it returns empty list instead of 404
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    users = pagination.items  # Get the list of users for the current page
 
     return render_template(
         "admin_user_management.html",
         users=users,
+        pagination=pagination,
         user=User.query.get(session["user_id"]),
     )
 
@@ -289,6 +329,212 @@ def admin_delete_user(user_id):
 
 
 # ==========================================
+# PROPOSAL MANAGEMENT (ADMIN)
+# ==========================================
+
+
+# 1. LIST ALL PROPOSALS
+@app.route("/admin/proposals")
+def admin_proposal_management():
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    # Filters
+    search_query = request.args.get("search", "")
+    filter_faculty = request.args.get("faculty", "")
+
+    page = request.args.get("page", 1, type=int)
+    per_page = 8
+
+    query = Proposal.query.join(Researcher).join(
+        User
+    )  # Join to access User.name and User.faculty
+
+    if search_query:
+        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+    if filter_faculty:
+        query = query.filter(User.faculty == filter_faculty)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    proposals = pagination.items
+
+    return render_template(
+        "admin_proposal_management.html",
+        proposals=proposals,
+        pagination=pagination,
+        user=User.query.get(session["user_id"]),
+    )
+
+
+# 2. OPEN PROPOSAL SUBMISSION (Create Cycle)
+@app.route("/admin/proposals/open", methods=["GET", "POST"])
+def admin_open_cycle():
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    if request.method == "POST":
+        cycle_name = request.form["cycle_name"]
+        faculty = request.form["faculty"]
+        start_date = datetime.strptime(request.form["start_date"], "%Y-%m-%d").date()
+        end_date = datetime.strptime(request.form["end_date"], "%Y-%m-%d").date()
+
+        # Validation
+        if end_date <= start_date:
+            flash("Error: End Date must be after Start Date.", "error")
+        else:
+            # Create Cycle
+            # Need Admin ID
+            admin = Admin.query.filter_by(mmu_id=session["user_id"]).first()
+            new_cycle = GrantCycle(
+                cycle_name=cycle_name,
+                faculty=faculty,
+                start_date=start_date,
+                end_date=end_date,
+                admin_id=admin.admin_id,
+            )
+            db.session.add(new_cycle)
+            db.session.commit()
+            flash(f"Submission Cycle '{cycle_name}' Opened for {faculty}!", "success")
+            return redirect(url_for("admin_proposal_management"))
+
+    return render_template(
+        "admin_open_cycle.html", user=User.query.get(session["user_id"])
+    )
+
+
+# 3. VIEW PROPOSAL DETAILS
+@app.route("/admin/proposals/view/<int:proposal_id>")
+def admin_view_proposal(proposal_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # Fetch existing deadlines if any
+    reviewer_deadline = Deadline.query.filter_by(
+        proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+    ).first()
+    hod_deadline = Deadline.query.filter_by(
+        proposal_id=proposal.proposal_id, deadline_type="HOD"
+    ).first()
+    final_deadline = Deadline.query.filter_by(
+        proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+    ).first()
+
+    return render_template(
+        "admin_view_proposal.html",
+        proposal=proposal,
+        user=User.query.get(session["user_id"]),
+        reviewer_deadline=reviewer_deadline,
+        hod_deadline=hod_deadline,
+        final_deadline=final_deadline,
+    )
+
+
+# 4. ASSIGN EVALUATORS & SET DEADLINES
+@app.route("/admin/proposals/assign/<int:proposal_id>", methods=["GET", "POST"])
+def admin_assign_evaluators(proposal_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    researcher_faculty = proposal.researcher.user_info.faculty
+
+    if request.method == "POST":
+        # 1. Assign Reviewer
+        reviewer_id = request.form.get("reviewer_id")
+        if reviewer_id:
+            proposal.assigned_reviewer_id = reviewer_id
+
+        # 2. Assign HOD
+        hod_id = request.form.get("hod_id")
+        if hod_id:
+            proposal.assigned_hod_id = hod_id
+
+        # 3. Set Deadlines
+        rev_date = request.form.get("reviewer_deadline")
+        hod_date = request.form.get("hod_deadline")
+
+        if rev_date:
+            # Update or Create Deadline entry
+            dl = Deadline.query.filter_by(
+                proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+            ).first()
+            if not dl:
+                dl = Deadline(
+                    proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+                )
+            dl.due_date = datetime.strptime(rev_date, "%Y-%m-%d").date()
+            db.session.add(dl)
+
+        if hod_date:
+            dl = Deadline.query.filter_by(
+                proposal_id=proposal.proposal_id, deadline_type="HOD"
+            ).first()
+            if not dl:
+                dl = Deadline(proposal_id=proposal.proposal_id, deadline_type="HOD")
+            dl.due_date = datetime.strptime(hod_date, "%Y-%m-%d").date()
+            db.session.add(dl)
+
+        proposal.status = "Under Review"
+        db.session.commit()
+        flash("Evaluators assigned and deadlines set successfully.", "success")
+        return redirect(
+            url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+        )
+
+    # GET: Fetch potential reviewers/HODs from the SAME faculty
+    # Using a join to filter by User.faculty
+    reviewers = (
+        Reviewer.query.join(User).filter(User.faculty == researcher_faculty).all()
+    )
+    hods = HOD.query.join(User).filter(User.faculty == researcher_faculty).all()
+
+    return render_template(
+        "admin_assign_evaluators.html",
+        proposal=proposal,
+        reviewers=reviewers,
+        hods=hods,
+        user=User.query.get(session["user_id"]),
+    )
+
+
+# 5. SET FINAL RESEARCH DEADLINE
+@app.route("/admin/proposals/final_deadline/<int:proposal_id>", methods=["POST"])
+def admin_set_final_deadline(proposal_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # Requirement: Cannot set final deadline if evaluators not assigned
+    if not proposal.assigned_reviewer_id or not proposal.assigned_hod_id:
+        flash(
+            "Error: You must assign Evaluators before setting the Final Research Deadline.",
+            "error",
+        )
+        return redirect(
+            url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+        )
+
+    final_date = request.form["final_deadline"]
+    if final_date:
+        dl = Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+        ).first()
+        if not dl:
+            dl = Deadline(
+                proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+            )
+        dl.due_date = datetime.strptime(final_date, "%Y-%m-%d").date()
+        db.session.add(dl)
+        db.session.commit()
+        flash("Final Research Submission Deadline Set!", "success")
+
+    return redirect(url_for("admin_view_proposal", proposal_id=proposal.proposal_id))
+
+
+# ==========================================
 # 2. RESEARCHER ROUTES
 # ==========================================
 @app.route("/researcher/login", methods=["POST", "GET"])
@@ -331,6 +577,81 @@ def researcher_profile():
             return redirect(url_for("researcher_profile"))
 
     return render_template("researcher_profile.html", user=user)
+
+
+# ==========================================
+# RESEARCHER: SUBMIT PROPOSAL
+# ==========================================
+
+
+# 1. LIST OPEN CYCLES (Where Researcher chooses what to apply for)
+@app.route("/researcher/apply")
+def researcher_apply_list():
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+
+    # Get current date
+    today = datetime.now().date()
+
+    # Find cycles that are Open AND current date is within range
+    # AND matches Researcher's Faculty (Optional: remove faculty filter if cross-faculty allowed)
+    user = User.query.get(session["user_id"])
+
+    active_cycles = GrantCycle.query.filter(
+        GrantCycle.faculty == user.faculty,
+        GrantCycle.start_date <= today,
+        GrantCycle.end_date >= today,
+    ).all()
+
+    return render_template(
+        "researcher_apply_list.html", cycles=active_cycles, user=user
+    )
+
+
+# 2. SUBMISSION FORM
+@app.route("/researcher/apply/<int:cycle_id>", methods=["GET", "POST"])
+def researcher_submit_form(cycle_id):
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+
+    cycle = GrantCycle.query.get_or_404(cycle_id)
+    user = User.query.get(session["user_id"])
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+
+    if request.method == "POST":
+        title = request.form["title"]
+        budget = request.form["budget"]
+
+        # FILE UPLOAD LOGIC
+        document_filename = None
+        if "proposal_file" in request.files:
+            file = request.files["proposal_file"]
+            if file and allowed_file(file.filename):
+                document_filename = save_document(file)
+            else:
+                flash("Error: Invalid file type. Please upload PDF or DOCX.", "error")
+                return redirect(request.url)
+        else:
+            flash("Error: You must upload a proposal document.", "error")
+            return redirect(request.url)
+
+        # Create Proposal Record
+        new_proposal = Proposal(
+            title=title,
+            requested_budget=budget,
+            status="Submitted",
+            researcher_id=researcher.researcher_id,
+            cycle_id=cycle.cycle_id,
+            document_file=document_filename,  # Save filename to DB
+        )
+
+        db.session.add(new_proposal)
+        db.session.commit()
+
+        flash("Proposal submitted successfully!", "success")
+        return redirect(url_for("researcher_dashboard"))
+
+    return render_template("researcher_submit_form.html", cycle=cycle, user=user)
 
 
 # ==========================================
