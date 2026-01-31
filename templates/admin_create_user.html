@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Create User - RGMS</title>
+    <title>Create User - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -19,10 +19,11 @@
                 <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li class="active"><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users"></i> User
                         Management</a></li>
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Proposal
+                        Management</a></li>
                 <li><a href="#"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
-                <li><a href="#"><i class="fas fa-file-contract"></i> Activity Log</a></li>
-                <li><a href="#"><i class="fas fa-cog"></i> System Configuration</a></li>
+                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -71,13 +72,12 @@
                             <div class="form-group">
                                 <label>Faculty</label>
                                 <select name="faculty"
-                                    style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa;"
+                                    style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; color: #333;"
                                     required>
-                                    <option value="FIST">FIST</option>
-                                    <option value="FCI">FCI</option>
-                                    <option value="FOM">FOM</option>
-                                    <option value="FOE">FOE</option>
-                                    <option value="FCM">FCM</option>
+                                    <option value="">-- Select Faculty --</option>
+                                    {% for f in faculties %}
+                                    <option value="{{ f.name }}">{{ f.name }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
 

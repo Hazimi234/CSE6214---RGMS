@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Submit Proposal - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-leaf"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-arrow-left"></i> Back to List</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>New Proposal Submission</h2> <span>{{ user.name }}</span>
+            </div>
+            <div class="content-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
+                    message }}</div>{% endfor %}{% endif %}
+                {% endwith %}
+
+                <div class="login-card" style="max-width: 800px; margin: 0 auto; text-align: left;">
+                    <h3 style="color: #1b5e20;">Application for: {{ cycle.cycle_name }}</h3>
+                    <p><strong>Faculty:</strong> {{ cycle.faculty }} | <strong>Deadline:</strong> {{ cycle.end_date }}
+                    </p>
+                    <hr>
+
+                    <form method="POST" enctype="multipart/form-data">
+
+                        <div class="form-group">
+                            <label>Research Title</label>
+                            <input type="text" name="title" placeholder="Enter the full title of your research"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Research Area</label>
+                            <select name="research_area"
+                                style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; color: #333;"
+                                required>
+                                <option value="">-- Select Area --</option>
+                                {% for area in research_areas %}
+                                <option value="{{ area.name }}">{{ area.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Requested Budget (RM)</label>
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <input type="number" name="budget" placeholder="e.g. 50000" step="0.01" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Proposal Document (PDF/DOCX)</label>
+                            <div
+                                style="border: 2px dashed #4caf50; padding: 20px; text-align: center; border-radius: 10px; background: #f1f8e9;">
+                                <i class="fas fa-cloud-upload-alt"
+                                    style="font-size: 2rem; color: #2e7d32; margin-bottom: 10px;"></i>
+                                <p style="margin: 0; font-size: 0.9rem; color: #555;">Click to upload your full proposal
+                                </p>
+                                <input type="file" name="proposal_file" required style="margin-top: 10px;">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 20px;">
+                            <i class="fas fa-paper-plane"></i> Submit Proposal
+                        </button>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

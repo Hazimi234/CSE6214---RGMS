@@ -1,5 +1,26 @@
+# Update create_admin.py
 from main import app, db
-from models import User, Admin
+from models import User, Admin, Faculty, ResearchArea
+
+def seed_data():
+    with app.app_context():
+        db.create_all()
+
+        # 1. Seed Faculties
+        initial_faculties = ["FIST", "FCI", "FOM", "FOE", "FCM"]
+        for f_name in initial_faculties:
+            if not Faculty.query.filter_by(name=f_name).first():
+                db.session.add(Faculty(name=f_name))
+
+        # 2. Seed Research Areas
+        initial_areas = ["Artificial Intelligence", "Cyber Security", "Data Science", "Software Engineering", "Business Analytics"]
+        for a_name in initial_areas:
+            if not ResearchArea.query.filter_by(name=a_name).first():
+                db.session.add(ResearchArea(name=a_name))
+
+
+        db.session.commit()
+        print("Database seeded with System Data and Admin!")
 
 def create_admin_user():
     with app.app_context():
@@ -38,3 +59,4 @@ def create_admin_user():
 
 if __name__ == "__main__":
     create_admin_user()
+    seed_data()

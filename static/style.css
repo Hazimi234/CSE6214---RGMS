@@ -235,13 +235,21 @@ p {
 }
 
 /* Main Content */
+/* Find the .top-bar section in your CSS and replace/update it to this */
+
 .main-content {
     margin-left: var(--sidebar-width);
-    width: 100%;
+    width: calc(100% - var(--sidebar-width));
+    /* key fix: ensures it fills remaining space */
     background-color: var(--bg-light);
+    display: flex;
+    flex-direction: column;
+    /* key fix: forces Top Bar to be above Content */
 }
 
 .top-bar {
+    width: 100%;
+    /* Force full width */
     height: 70px;
     background: white;
     display: flex;
@@ -249,6 +257,12 @@ p {
     justify-content: space-between;
     padding: 0 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    /* Ensures padding doesn't break width */
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    /* Ensures it stays on top of content */
 }
 
 .content-wrapper {
@@ -381,4 +395,103 @@ p {
     font-weight: 900;
     margin-right: 15px;
     font-size: 1.2rem;
+}
+
+/* --- NOTIFICATIONS STYLING --- */
+
+.notif-item {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    background-color: white;
+    transition: background-color 0.2s;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background-color: #fafafa;
+}
+
+/* UNREAD STATE (Green Highlight) */
+.notif-item.unread {
+    background-color: #e8f5e9;
+    /* Light Mint Green */
+    border-left: 4px solid #2e7d32;
+    /* Green Stripe on left */
+}
+
+.notif-icon {
+    font-size: 1.3rem;
+    margin-top: 2px;
+    width: 30px;
+    text-align: center;
+}
+
+.notif-content {
+    flex: 1;
+}
+
+.notif-sender {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Bolder text for unread items */
+.notif-item.unread .notif-sender {
+    color: #1b5e20;
+    /* Dark Green */
+    font-weight: 700;
+}
+
+.notif-text {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+
+.notif-time {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+/* "NEW" Badge */
+.badge-new {
+    background-color: #d32f2f;
+    /* Red */
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Small View Button */
+.btn-sm {
+    text-decoration: none;
+    color: #2e7d32;
+    border: 1px solid #2e7d32;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.btn-sm:hover {
+    background-color: #2e7d32;
+    color: white;
 }

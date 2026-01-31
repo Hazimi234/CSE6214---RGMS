@@ -1,65 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>View Proposal - RGMS</title>
+    <title>View Proposal - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
-<div class="dashboard-container">
-    <div class="sidebar">
-        <div class="sidebar-header"><i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
-        <ul class="sidebar-menu">
-            <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-arrow-left"></i> Back to List</a></li>
-        </ul>
-    </div>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-leaf"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-arrow-left"></i> Back to
+                        List</a></li>
+            </ul>
+        </div>
 
-    <div class="main-content">
-        <div class="top-bar"><h2>Proposal Details</h2> <span>{{ user.name }}</span></div>
-        <div class="content-wrapper">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
-            {% endwith %}
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Proposal Details</h2> <span>{{ user.name }}</span>
+            </div>
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
+                    message }}</div>{% endfor %}{% endif %}
+                {% endwith %}
 
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                <div class="section-card">
-                    <h3 style="color: #1b5e20;">{{ proposal.title }}</h3>
-                    <p><strong>Researcher:</strong> {{ proposal.researcher.user_info.name }} ({{ proposal.researcher.user_info.faculty }})</p>
-                    <p><strong>Cycle:</strong> {{ proposal.cycle.cycle_name }}</p>
-                    <p><strong>Budget Requested:</strong> RM {{ proposal.requested_budget }}</p>
-                    <p><strong>Status:</strong> <span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:5px;">{{ proposal.status }}</span></p>
-                    <hr>
-                    <h4>Evaluators</h4>
-                    <p><strong>Reviewer:</strong> 
-                        {% if proposal.reviewer %}{{ proposal.reviewer.user_info.name }}{% else %}<span style="color:red;">Not Assigned</span>{% endif %}
-                        <br><small>Deadline: {{ reviewer_deadline.due_date if reviewer_deadline else 'Not Set' }}</small>
-                    </p>
-                    <p><strong>HOD:</strong> 
-                        {% if proposal.hod %}{{ proposal.hod.user_info.name }}{% else %}<span style="color:red;">Not Assigned</span>{% endif %}
-                        <br><small>Deadline: {{ hod_deadline.due_date if hod_deadline else 'Not Set' }}</small>
-                    </p>
-                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <div class="section-card">
+                        <h3 style="color: #1b5e20;">{{ proposal.title }}</h3>
+                        <p><strong>Researcher:</strong> {{ proposal.researcher.user_info.name }} ({{
+                            proposal.researcher.user_info.faculty }})</p>
+                        <p><strong>Cycle:</strong> {{ proposal.cycle.cycle_name }}</p>
+                        <p><strong>Budget Requested:</strong> RM {{ proposal.requested_budget }}</p>
+                        <p><strong>Status:</strong> <span
+                                style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:5px;">{{
+                                proposal.status }}</span></p>
+                        <p><strong>Proposal Document:</strong>
+                            {% if proposal.document_file %}
+                            <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
+                                target="_blank" style="color: #1565c0; text-decoration: underline;">
+                                <i class="fas fa-file-pdf"></i> Download File
+                            </a>
+                            {% else %}
+                            <span style="color: red;">No file uploaded</span>
+                            {% endif %}
+                        </p>
+                        <hr>
+                        <h4>Evaluators</h4>
+                        <p><strong>Reviewer:</strong>
+                            {% if proposal.reviewer %}{{ proposal.reviewer.user_info.name }}{% else %}<span
+                                style="color:red;">Not Assigned</span>{% endif %}
+                            <br><small>Deadline: {{ reviewer_deadline.due_date if reviewer_deadline else 'Not Set'
+                                }}</small>
+                        </p>
+                        <p><strong>HOD:</strong>
+                            {% if proposal.hod %}{{ proposal.hod.user_info.name }}{% else %}<span style="color:red;">Not
+                                Assigned</span>{% endif %}
+                            <br><small>Deadline: {{ hod_deadline.due_date if hod_deadline else 'Not Set' }}</small>
+                        </p>
+                    </div>
 
-                <div class="section-card">
-                    <h4>Actions</h4>
-                    <a href="{{ url_for('admin_assign_evaluators', proposal_id=proposal.proposal_id) }}" class="btn-primary" style="margin-bottom: 15px; text-align: center;">
-                        <i class="fas fa-user-check"></i> Assign Evaluators
-                    </a>
+                    <div class="section-card">
+                        <h4>Actions</h4>
+                        <a href="{{ url_for('admin_assign_evaluators', proposal_id=proposal.proposal_id) }}"
+                            class="btn-primary" style="margin-bottom: 15px; text-align: center;">
+                            <i class="fas fa-user-check"></i> Assign Evaluators
+                        </a>
 
-                    <hr>
-                    <h4>Final Research Deadline</h4>
-                    <form method="POST" action="{{ url_for('admin_set_final_deadline', proposal_id=proposal.proposal_id) }}">
-                        <div class="form-group">
-                            <label>Submission Deadline</label>
-                            <input type="date" name="final_deadline" value="{{ final_deadline.due_date if final_deadline else '' }}" required>
-                        </div>
-                        <button type="submit" class="btn-outline" style="width: 100%;">Set Deadline</button>
-                    </form>
+                        <hr>
+                        <h4>Final Research Deadline</h4>
+                        <form method="POST"
+                            action="{{ url_for('admin_set_final_deadline', proposal_id=proposal.proposal_id) }}">
+                            <div class="form-group">
+                                <label>Submission Deadline</label>
+                                <input type="date" name="final_deadline"
+                                    value="{{ final_deadline.due_date if final_deadline else '' }}" required>
+                            </div>
+                            <button type="submit" class="btn-outline" style="width: 100%;">Set Deadline</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </body>
+
 </html>

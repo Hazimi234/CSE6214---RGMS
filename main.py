@@ -15,6 +15,9 @@ from models import (
     GrantCycle,
     Proposal,
     Deadline,
+    Notification,
+    Faculty,
+    ResearchArea,
 )
 
 app = Flask(__name__)
@@ -112,6 +115,27 @@ def update_user_profile(user, form, files):
         return False
 
 
+# --- HELPER: Send Notification ---
+def send_notification(recipient_id, message, link=None, sender_id=None):
+    notif = Notification(
+        recipient_id=recipient_id, sender_id=sender_id, message=message, link=link
+    )
+    db.session.add(notif)
+    db.session.commit()
+
+
+# --- CONTEXT PROCESSOR ---
+# This makes the 'unread_count' variable available in ALL templates (for the Bell icon)
+@app.context_processor
+def inject_notifications():
+    if "user_id" in session:
+        unread = Notification.query.filter_by(
+            recipient_id=session["user_id"], is_read=False
+        ).count()
+        return dict(unread_notifications=unread)
+    return dict(unread_notifications=0)
+
+
 # --- Routes ---
 
 
@@ -125,6 +149,73 @@ def logout():
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("main_login"))
+
+
+# ==========================================
+# NEW: NOTIFICATION ROUTES
+# ==========================================
+# 1. UPDATE: View List (Do NOT mark as read automatically anymore)
+@app.route("/notifications")
+def view_notifications():
+    if "user_id" not in session:
+        return redirect(url_for("main_login"))
+
+    user_id = session["user_id"]
+
+    # Get notifications (Newest first)
+    notifs = (
+        Notification.query.filter_by(recipient_id=user_id)
+        .order_by(Notification.timestamp.desc())
+        .all()
+    )
+
+    # NOTE: I removed the code that set n.is_read = True here.
+    # Now they stay unread until clicked.
+
+    return render_template(
+        "notifications.html", notifications=notifs, user=User.query.get(user_id)
+    )
+
+
+# 2. NEW: Handle Click (Mark ONE as Read -> Redirect)
+@app.route("/notifications/click/<int:notif_id>")
+def click_notification(notif_id):
+    if "user_id" not in session:
+        return redirect(url_for("main_login"))
+
+    notif = Notification.query.get_or_404(notif_id)
+
+    # Security Check
+    if notif.recipient_id != session["user_id"]:
+        return redirect(url_for("view_notifications"))
+
+    # Mark specific notification as read
+    notif.is_read = True
+    db.session.commit()
+
+    # Redirect to the target link (e.g., Proposal Details)
+    if notif.link:
+        return redirect(notif.link)
+    else:
+        return redirect(url_for("view_notifications"))
+
+
+# 3. NEW: Mark ALL as Read button logic
+@app.route("/notifications/mark_all_read")
+def mark_all_notifications_read():
+    if "user_id" not in session:
+        return redirect(url_for("main_login"))
+
+    user_id = session["user_id"]
+
+    # Find all unread messages for this user
+    unread = Notification.query.filter_by(recipient_id=user_id, is_read=False).all()
+    for n in unread:
+        n.is_read = True
+
+    db.session.commit()
+    flash("All notifications marked as read.", "success")
+    return redirect(url_for("view_notifications"))
 
 
 # ==========================================
@@ -198,6 +289,7 @@ def admin_user_management():
 
     # Start Query
     query = User.query
+    faculties_list = Faculty.query.all()
 
     # Apply Filters
     if search_query:
@@ -217,6 +309,7 @@ def admin_user_management():
         users=users,
         pagination=pagination,
         user=User.query.get(session["user_id"]),
+        faculties=faculties_list,
     )
 
 
@@ -267,7 +360,9 @@ def admin_create_user():
             flash("Database Error: Could not create user.", "error")
 
     return render_template(
-        "admin_create_user.html", user=User.query.get(session["user_id"])
+        "admin_create_user.html",
+        user=User.query.get(session["user_id"]),
+        faculties=Faculty.query.all(),
     )
 
 
@@ -306,6 +401,7 @@ def admin_edit_user(user_id):
         "admin_edit_user.html",
         target_user=target_user,
         user=User.query.get(session["user_id"]),
+        faculties=Faculty.query.all(),
     )
 
 
@@ -398,7 +494,9 @@ def admin_open_cycle():
             return redirect(url_for("admin_proposal_management"))
 
     return render_template(
-        "admin_open_cycle.html", user=User.query.get(session["user_id"])
+        "admin_open_cycle.html",
+        user=User.query.get(session["user_id"]),
+        faculties=Faculty.query.all(),
     )
 
 
@@ -535,6 +633,72 @@ def admin_set_final_deadline(proposal_id):
 
 
 # ==========================================
+# MAINTAIN SYSTEM DATA (Faculties & Research Areas)
+# ==========================================
+
+
+@app.route("/admin/system_data", methods=["GET", "POST"])
+def admin_system_data():
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    if request.method == "POST":
+        # Handle Adding New Data
+        type_added = request.form.get("type")  # 'faculty' or 'area'
+        name_added = request.form.get("name").strip()
+
+        if type_added == "faculty":
+            if Faculty.query.filter_by(name=name_added).first():
+                flash(f"Error: Faculty '{name_added}' already exists.", "error")
+            else:
+                db.session.add(Faculty(name=name_added))
+                db.session.commit()
+                flash(f"Faculty '{name_added}' added successfully.", "success")
+
+        elif type_added == "area":
+            if ResearchArea.query.filter_by(name=name_added).first():
+                flash(f"Error: Research Area '{name_added}' already exists.", "error")
+            else:
+                db.session.add(ResearchArea(name=name_added))
+                db.session.commit()
+                flash(f"Research Area '{name_added}' added successfully.", "success")
+
+        return redirect(url_for("admin_system_data"))
+
+    # Fetch lists to display
+    faculties = Faculty.query.all()
+    areas = ResearchArea.query.all()
+
+    return render_template(
+        "admin_system_data.html",
+        faculties=faculties,
+        areas=areas,
+        user=User.query.get(session["user_id"]),
+    )
+
+
+@app.route("/admin/system_data/edit", methods=["POST"])
+def admin_edit_system_data():
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    item_type = request.form.get("type")
+    item_id = request.form.get("id")
+    new_name = request.form.get("name").strip()
+
+    if item_type == "faculty":
+        item = Faculty.query.get(item_id)
+        item.name = new_name
+    elif item_type == "area":
+        item = ResearchArea.query.get(item_id)
+        item.name = new_name
+
+    db.session.commit()
+    flash("Item updated successfully.", "success")
+    return redirect(url_for("admin_system_data"))
+
+
+# ==========================================
 # 2. RESEARCHER ROUTES
 # ==========================================
 @app.route("/researcher/login", methods=["POST", "GET"])
@@ -590,21 +754,29 @@ def researcher_apply_list():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
 
-    # Get current date
     today = datetime.now().date()
-
-    # Find cycles that are Open AND current date is within range
-    # AND matches Researcher's Faculty (Optional: remove faculty filter if cross-faculty allowed)
     user = User.query.get(session["user_id"])
 
-    active_cycles = GrantCycle.query.filter(
-        GrantCycle.faculty == user.faculty,
+    # Filter Logic
+    filter_faculty = request.args.get("faculty", "")
+
+    query = GrantCycle.query.filter(
         GrantCycle.start_date <= today,
         GrantCycle.end_date >= today,
-    ).all()
+        GrantCycle.is_open == True,
+    )
+
+    # If user selects a specific faculty, apply filter. Otherwise, show ALL.
+    if filter_faculty:
+        query = query.filter(GrantCycle.faculty == filter_faculty)
+
+    active_cycles = query.all()
 
     return render_template(
-        "researcher_apply_list.html", cycles=active_cycles, user=user
+        "researcher_apply_list.html",
+        cycles=active_cycles,
+        user=user,
+        faculties=Faculty.query.all(),
     )
 
 
@@ -620,6 +792,7 @@ def researcher_submit_form(cycle_id):
 
     if request.method == "POST":
         title = request.form["title"]
+        research_area = request.form["research_area"]
         budget = request.form["budget"]
 
         # FILE UPLOAD LOGIC
@@ -637,21 +810,36 @@ def researcher_submit_form(cycle_id):
 
         # Create Proposal Record
         new_proposal = Proposal(
-            title=title,
-            requested_budget=budget,
+            title=request.form["title"],
+            research_area=request.form["research_area"],
+            requested_budget=request.form["budget"],
             status="Submitted",
-            researcher_id=researcher.researcher_id,
+            researcher_id=Researcher.query.filter_by(mmu_id=session["user_id"])
+            .first()
+            .researcher_id,
             cycle_id=cycle.cycle_id,
-            document_file=document_filename,  # Save filename to DB
+            document_file=document_filename,
         )
-
         db.session.add(new_proposal)
         db.session.commit()
 
-        flash("Proposal submitted successfully!", "success")
+        # --- NEW: NOTIFY ADMIN ---
+        # Find the Admin who created this cycle (or just the first super admin)
+        admin_recipient = User.query.filter_by(user_role="Admin").first()
+        if admin_recipient:
+            msg = f"New Proposal Submitted: '{new_proposal.title}' by {user.name}."
+            link = url_for("admin_view_proposal", proposal_id=new_proposal.proposal_id)
+            send_notification(admin_recipient.mmu_id, msg, link, sender_id=user.mmu_id)
+
+        flash("Proposal submitted! Admin has been notified.", "success")
         return redirect(url_for("researcher_dashboard"))
 
-    return render_template("researcher_submit_form.html", cycle=cycle, user=user)
+    return render_template(
+        "researcher_submit_form.html",
+        cycle=cycle,
+        user=user,
+        research_areas=ResearchArea.query.all(),
+    )
 
 
 # ==========================================
