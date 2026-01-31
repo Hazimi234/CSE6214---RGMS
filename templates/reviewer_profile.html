@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Profile - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-leaf"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('reviewer_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li class="active"><a href="{{ url_for('reviewer_profile') }}"><i class="fas fa-user-circle"></i> My
+                        Account</a></li>
+                <li><a href="#"><i class="fas fa-clipboard-list"></i> Assigned Proposal</a></li>
+                <li><a href="#"><i class="fas fa-history"></i> Review Proposal</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Manage Profile</h2>
+
+                <div style="display: flex; align-items: center; gap: 25px;">
+                    <a href="{{ url_for('view_notifications') }}"
+                        style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                        <span
+                            style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: right; line-height: 1.3;">
+                            <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                            <small style="color: #666;">Reviewer</small>
+                        </div>
+                        <a href="{{ url_for('reviewer_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <div class="login-card" style="max-width: 700px; text-align: left; margin: 0 auto;">
+                    <h3 style="text-align: center; color: #1b5e20;">Update Account Details</h3>
+                    <form method="POST" action="{{ url_for('reviewer_profile') }}" enctype="multipart/form-data">
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #4caf50;">
+                            <br>
+                            <label for="profile_pic" class="btn-primary"
+                                style="display: inline-block; width: auto; padding: 8px 15px; font-size: 0.9rem; margin-top: 5px;">
+                                <i class="fas fa-camera"></i> Change Photo
+                            </label>
+                            <input type="file" name="profile_pic" id="profile_pic" style="display: none;">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+                            <div class="form-group">
+                                <label>MMU ID</label>
+                                <input type="text" value="{{ user.mmu_id }}" disabled
+                                    style="background: #e9ecef; cursor: not-allowed;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Faculty</label>
+                                <input type="text" value="{{ user.faculty }}" disabled
+                                    style="background: #e9ecef; color: #1b5e20; font-weight: bold; cursor: not-allowed;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" name="name" value="{{ user.name }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" name="email" value="{{ user.email }}" required>
+                            </div>
+
+                            <div class="form-group"
+                                style="grid-column: span 2; width: 98%; max-width: 48%; margin: 0 auto;">
+                                <label>Phone Number</label>
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-phone"></i>
+                                    <input type="tel" name="phone_number"
+                                        value="{{ user.phone_number if user.phone_number else '' }}"
+                                        placeholder="e.g. 012-3456789">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr style="margin: 20px 0; border-top: 1px solid #eee;">
+                        <h4 style="color: #1b5e20;"><i class="fas fa-lock"></i> Change Password</h4>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group"><label>New Password</label><input type="password"
+                                    name="new_password"></div>
+                            <div class="form-group"><label>Confirm Password</label><input type="password"
+                                    name="confirm_password"></div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 20px;">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

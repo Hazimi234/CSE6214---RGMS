@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Edit User - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-leaf" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li class="active"><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users"></i> User
+                        Management</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Proposal
+                        Management</a></li>
+                <li><a href="#"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
+                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Edit User: {{ target_user.name }}</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span>{{ user.name }}</span>
+                    <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                        style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                <div class="login-card" style="max-width: 700px; text-align: left; margin: 0 auto;">
+                    <h3 style="color: #1b5e20;">Update User Details</h3>
+                    <p>Editing user: <strong>{{ target_user.user_role }}</strong></p>
+                    <hr>
+
+                    <form method="POST" action="{{ url_for('admin_edit_user', user_id=target_user.mmu_id) }}">
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+                            <div class="form-group">
+                                <label>MMU ID</label>
+                                <input type="text" value="{{ target_user.mmu_id }}" disabled
+                                    style="background: #e9ecef; cursor: not-allowed;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Faculty</label>
+                                <select name="faculty"
+                                    style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; color: #333;"
+                                    required>
+                                    {% for f in faculties %}
+                                    <option value="{{ f.name }}" {% if target_user.faculty==f.name %}selected{% endif
+                                        %}>
+                                        {{ f.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" name="name" value="{{ target_user.name }}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" name="email" value="{{ target_user.email }}" required>
+                            </div>
+
+                            <div class="form-group"
+                                style="grid-column: span 2; width: 98%; max-width: 48%; margin: 0 auto;">
+                                <label>Phone Number</label>
+                                <div class="input-icon-wrapper">
+                                    <i class="fas fa-phone"></i>
+                                    <input type="tel" name="phone_number"
+                                        value="{{ target_user.phone_number if target_user.phone_number else '' }}"
+                                        placeholder="e.g. 012-3456789">
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr style="margin: 20px 0; border-top: 1px solid #eee;">
+                        <h4 style="color: #1b5e20; margin-top: 0;">Security Override</h4>
+
+                        <div class="form-group">
+                            <label>Reset Password (Optional)</label>
+                            <input type="password" name="password" placeholder="Enter new password to override">
+                            <small style="color: #666;">Leave blank to keep current password.</small>
+                        </div>
+
+                        <div style="margin-top: 25px; display: flex; gap: 10px;">
+                            <button type="submit" class="btn-primary" style="margin: 0;">Save Changes</button>
+                            <a href="{{ url_for('admin_user_management') }}" class="btn-outline"
+                                style="text-align: center; width: 100px; padding: 14px;">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
