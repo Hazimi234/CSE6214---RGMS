@@ -94,14 +94,36 @@
                             {% for cycle in cycles %}
                             <tr style="border-bottom: 1px solid #eee;">
                                 <td style="padding: 15px; font-weight: bold;">{{ cycle.cycle_name }}</td>
-                                <td style="padding: 15px;">{{ cycle.faculty }}</td>
+
+                                <td style="padding: 15px;">
+                                    {% if cycle.faculty == user.faculty %}
+                                    <span
+                                        style="color: #2e7d32; font-weight: bold; background: #e8f5e9; padding: 4px 8px; border-radius: 4px;">
+                                        {{ cycle.faculty }} (Yours)
+                                    </span>
+                                    {% else %}
+                                    <span style="color: #666;">
+                                        {{ cycle.faculty }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+
                                 <td style="padding: 15px; color: #c62828;">{{ cycle.end_date.strftime('%d %b %Y') }}
                                 </td>
+
                                 <td style="padding: 15px; text-align: center;">
+                                    {% if cycle.faculty == user.faculty %}
                                     <a href="{{ url_for('researcher_submit_form', cycle_id=cycle.cycle_id) }}"
-                                        class="btn-primary" style="padding: 8px 15px; width: auto;">
+                                        class="btn-primary"
+                                        style="padding: 8px 15px; width: auto; text-decoration: none;">
                                         Apply Now <i class="fas fa-arrow-right"></i>
                                     </a>
+                                    {% else %}
+                                    <button disabled
+                                        style="background: #e0e0e0; color: #999; border: 1px solid #ccc; padding: 8px 15px; border-radius: 8px; cursor: not-allowed; font-weight: bold;">
+                                        <i class="fas fa-lock"></i> Not Eligible
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% else %}
