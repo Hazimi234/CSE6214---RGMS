@@ -8,7 +8,7 @@ bcrypt = Bcrypt()
 # --- EXISTING USER TABLES (Do not change) ---
 class User(db.Model):
     __tablename__ = 'user'
-    mmu_id = db.Column(db.Integer, primary_key=True)
+    mmu_id = db.Column(db.String(15), primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)

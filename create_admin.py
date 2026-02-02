@@ -36,11 +36,11 @@ def create_admin_user():
         # 3. Create the User Record
         # We use mmu_id 1001 and password 'admin123' for testing
         new_user = User(
-            mmu_id=1001,
-            name="Super Admin",
-            email="admin@mmu.edu.my",
+            mmu_id="242UC244PU",
+            name="Meor Hazimi",
+            email="moerhazimi@mmu.edu.my",
             password="", # Will set hash below
-            faculty="Computing",
+            faculty="FCI",
             user_role="Admin"
         )
         new_user.set_password("admin123") # Hashes the password
