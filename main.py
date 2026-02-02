@@ -840,12 +840,28 @@ def hod_assigned_proposals():
         return redirect(url_for("hod_login"))
 
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
-    proposals = Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id).all()
+    
+    # Filter and pagination
+    search_query = request.args.get("search", "")
+    filter_faculty = request.args.get("faculty", "")
+    page = request.args.get("page", 1, type=int)
+    per_page = 8
+
+    query = Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id).join(Researcher).join(User)
+
+    if search_query:
+        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+    if filter_faculty:
+        query = query.filter(User.faculty == filter_faculty)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
     return render_template(
         "hod_assigned_proposals.html",
-        proposals=proposals,
+        proposals=pagination.items,
+        pagination=pagination,
         user=User.query.get(session["user_id"]),
+        faculties=Faculty.query.all(),
     )
 
 @app.route("/hod/proposals/view/<int:proposal_id>")

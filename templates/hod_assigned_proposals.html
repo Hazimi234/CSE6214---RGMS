@@ -60,6 +60,32 @@
             </div>
 
             <div class="content-wrapper">
+                <div class="section-card" style="margin-bottom: 20px;">
+                    <form method="GET" action="{{ url_for('hod_assigned_proposals') }}"
+                        style="display: flex; gap: 15px; align-items: flex-end;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: bold;">Search Proposal</label>
+                            <input type="text" name="search" placeholder="Search by title..."
+                                value="{{ request.args.get('search', '') }}"
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                        <div style="width: 200px;">
+                            <label style="font-weight: bold;">Filter Faculty</label>
+                            <select name="faculty"
+                                style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                                <option value="">All Faculties</option>
+                                {% for f in faculties %}
+                                <option value="{{ f.name }}" {% if request.args.get('faculty')==f.name %}selected{% endif %}>
+                                    {{ f.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-primary" style="width: auto; padding: 10px 20px;"><i
+                                class="fas fa-filter"></i> Filter</button>
+                    </form>
+                </div>
+
                 <div class="table-card">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -100,6 +126,32 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                    {% if pagination.has_prev %}
+                    <a href="{{ url_for('hod_assigned_proposals', page=pagination.prev_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
+                        class="btn-outline" style="padding: 8px 15px;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                    {% else %}
+                    <span class="btn-outline" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </span>
+                    {% endif %}
+                    <span style="font-weight: bold; color: #1b5e20;">
+                        Page {{ pagination.page }} of {{ pagination.pages }}
+                    </span>
+                    {% if pagination.has_next %}
+                    <a href="{{ url_for('hod_assigned_proposals', page=pagination.next_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
+                        class="btn-outline" style="padding: 8px 15px;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                    {% else %}
+                    <span class="btn-outline" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </span>
+                    {% endif %}
                 </div>
             </div>
         </div>
