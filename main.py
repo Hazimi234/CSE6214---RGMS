@@ -1,10 +1,12 @@
 import os
 import secrets
+from datetime import datetime
 from flask import Flask, redirect, url_for, render_template, request, session, flash
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
-from datetime import datetime
+
+# Import Database Models
 from models import (
     db,
     User,
@@ -20,25 +22,37 @@ from models import (
     ResearchArea,
 )
 
+# ============================================================================
+#                          APP CONFIGURATION & SETUP
+# ============================================================================
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here"
+app.secret_key = "your_secret_key_here"  # Change this in production!
 
-# Database & Upload Config
+# Database Configuration
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
     basedir, "database.db"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Folder to save images
+# File Upload Configurations
 app.config["UPLOAD_FOLDER"] = os.path.join(basedir, "static/profile_pics")
-
-# Folder for Proposal Documents (PDFs)
 app.config["UPLOAD_FOLDER_DOCS"] = os.path.join(basedir, "static/proposal_docs")
 app.config["ALLOWED_EXTENSIONS"] = {"pdf", "docx", "doc"}
 
+# Initialize Extensions
+db.init_app(app)
+migrate = Migrate(app, db)
+bcrypt = Bcrypt(app)
+
+
+# ========================================================================
+#                            HELPER FUNCTIONS
+# ========================================================================
+
 
 def allowed_file(filename):
+    """Checks if a file has an allowed extension (PDF, DOCX)."""
     return (
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in app.config["ALLOWED_EXTENSIONS"]
@@ -46,7 +60,7 @@ def allowed_file(filename):
 
 
 def save_document(form_file):
-    # Generates a random name for the document to avoid clashes
+    """Saves a proposal document with a random hex name to avoid filename collisions."""
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_file.filename)
     doc_fn = random_hex + f_ext
@@ -55,26 +69,22 @@ def save_document(form_file):
     return doc_fn
 
 
-db.init_app(app)
-migrate = Migrate(app, db)
-bcrypt = Bcrypt(app)
-
-
-# --- Helper Function to Save Images ---
 def save_picture(form_picture):
-    # Create a random hex name to prevent duplicate filenames
+    """Saves a profile picture with a random hex name."""
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_picture.filename)
     picture_fn = random_hex + f_ext
     picture_path = os.path.join(app.config["UPLOAD_FOLDER"], picture_fn)
-
-    # Save the file
     form_picture.save(picture_path)
     return picture_fn
 
 
-# --- Helper Function for Profile Updates (Reduces code repetition) ---
 def update_user_profile(user, form, files):
+    """
+    Handles common profile update logic for all user roles.
+    Updates name, email, phone, profile pic, and password.
+    Returns True if successful, False if failed.
+    """
     # 1. Update Basic Info
     user.name = form["name"]
     user.email = form["email"]
@@ -94,13 +104,13 @@ def update_user_profile(user, form, files):
     if new_password:
         if new_password != confirm_password:
             flash("Error: New password and Confirmation do not match!", "error")
-            return False  # Failed
+            return False
         elif user.check_password(new_password):
             flash(
                 "Error: New password cannot be the same as your current password.",
                 "error",
             )
-            return False  # Failed
+            return False
         else:
             user.set_password(new_password)
             flash("Password successfully changed.", "success")
@@ -115,8 +125,8 @@ def update_user_profile(user, form, files):
         return False
 
 
-# --- HELPER: Send Notification ---
 def send_notification(recipient_id, message, link=None, sender_id=None):
+    """Creates a new notification record in the database."""
     notif = Notification(
         recipient_id=recipient_id, sender_id=sender_id, message=message, link=link
     )
@@ -124,10 +134,17 @@ def send_notification(recipient_id, message, link=None, sender_id=None):
     db.session.commit()
 
 
-# --- CONTEXT PROCESSOR ---
-# This makes the 'unread_count' variable available in ALL templates (for the Bell icon)
+# =============================================================================
+#                              CONTEXT PROCESSORS
+# =============================================================================
+
+
 @app.context_processor
 def inject_notifications():
+    """
+    Runs before every template render.
+    Makes 'unread_notifications' available globally for the bell icon badge.
+    """
     if "user_id" in session:
         unread = Notification.query.filter_by(
             recipient_id=session["user_id"], is_read=False
@@ -136,79 +153,72 @@ def inject_notifications():
     return dict(unread_notifications=0)
 
 
-# --- Routes ---
+# ==============================================================================
+#                        GENERAL ROUTES (Auth & Notifications)
+# ==============================================================================
 
 
 @app.route("/")
 def main_login():
+    """Landing page / Main Login selection."""
     return render_template("main_login.html")
 
 
 @app.route("/logout")
 def logout():
+    """Clears session and redirects to main login."""
     session.clear()
     flash("You have been logged out.", "info")
     return redirect(url_for("main_login"))
 
 
-# ==========================================
-# NEW: NOTIFICATION ROUTES
-# ==========================================
-# 1. UPDATE: View List (Do NOT mark as read automatically anymore)
+# --- Notification System ---
+
+
 @app.route("/notifications")
 def view_notifications():
+    """Lists all notifications for the logged-in user."""
     if "user_id" not in session:
         return redirect(url_for("main_login"))
-
     user_id = session["user_id"]
 
-    # Get notifications (Newest first)
+    # Fetch notifications (Newest first)
     notifs = (
         Notification.query.filter_by(recipient_id=user_id)
         .order_by(Notification.timestamp.desc())
         .all()
     )
-
-    # NOTE: I removed the code that set n.is_read = True here.
-    # Now they stay unread until clicked.
-
     return render_template(
         "notifications.html", notifications=notifs, user=User.query.get(user_id)
     )
 
 
-# 2. NEW: Handle Click (Mark ONE as Read -> Redirect)
 @app.route("/notifications/click/<int:notif_id>")
 def click_notification(notif_id):
+    """Marks a single notification as read and redirects to the link."""
     if "user_id" not in session:
         return redirect(url_for("main_login"))
-
     notif = Notification.query.get_or_404(notif_id)
 
-    # Security Check
+    # Security: Ensure user owns this notification
     if notif.recipient_id != session["user_id"]:
         return redirect(url_for("view_notifications"))
 
-    # Mark specific notification as read
     notif.is_read = True
     db.session.commit()
 
-    # Redirect to the target link (e.g., Proposal Details)
-    if notif.link:
-        return redirect(notif.link)
-    else:
-        return redirect(url_for("view_notifications"))
+    return (
+        redirect(notif.link) if notif.link else redirect(url_for("view_notifications"))
+    )
 
 
-# 3. NEW: Mark ALL as Read button logic
 @app.route("/notifications/mark_all_read")
 def mark_all_notifications_read():
+    """Marks all unread notifications as read at once."""
     if "user_id" not in session:
         return redirect(url_for("main_login"))
-
     user_id = session["user_id"]
 
-    # Find all unread messages for this user
     unread = Notification.query.filter_by(recipient_id=user_id, is_read=False).all()
     for n in unread:
         n.is_read = True
@@ -218,9 +228,12 @@ def mark_all_notifications_read():
     return redirect(url_for("view_notifications"))
 
 
-# ==========================================
-# 1. ADMIN ROUTES
-# ==========================================
+# ================================================================================
+#                                   ADMIN MODULE
+# ================================================================================
+
+
+# --- Admin Auth & Dashboard ---
 @app.route("/admin/login", methods=["POST", "GET"])
 def admin_login():
     if request.method == "POST":
@@ -232,12 +245,10 @@ def admin_login():
             session["user_id"] = user.mmu_id
             session["role"] = "Admin"
             session["name"] = user.name
-            # Store profile pic in session for easy access
             session["profile_image"] = user.profile_image
             return redirect(url_for("admin_dashboard"))
         else:
             flash("Invalid Admin credentials.", "error")
-
     return render_template("admin_login.html")
 
 
@@ -245,11 +256,12 @@ def admin_login():
 def admin_dashboard():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
-    # Refresh user data from DB to get the latest image
     user = User.query.get(session["user_id"])
-
-    stats = {"pending_proposals": 12, "active_grants": 45, "total_users": 150}
+    stats = {
+        "pending_proposals": 12,
+        "active_grants": 45,
+        "total_users": 150,
+    }  # Placeholder stats
     return render_template("admin_dashboard.html", stats=stats, user=user)
 
 
@@ -257,41 +269,28 @@ def admin_dashboard():
 def admin_profile():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     user = User.query.get(session["user_id"])
-
     if request.method == "POST":
         if update_user_profile(user, request.form, request.files):
             return redirect(url_for("admin_profile"))
-
     return render_template("admin_profile.html", user=user)
 
 
-# ==========================================
-# USER MANAGEMENT (ADMIN ONLY)
-# ==========================================
-
-
-# 1. VIEW & FILTER USERS
+# --- User Management ---
 @app.route("/admin/users")
 def admin_user_management():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
 
-    # Get Filter Parameters
+    # Filtering logic
     search_query = request.args.get("search", "")
     filter_role = request.args.get("role", "")
     filter_faculty = request.args.get("faculty", "")
 
-    # Pagination Parameters (Default to Page 1, 8 items per page)
     page = request.args.get("page", 1, type=int)
     per_page = 8
 
-    # Start Query
     query = User.query
-    faculties_list = Faculty.query.all()
-
-    # Apply Filters
     if search_query:
         query = query.filter(User.name.ilike(f"%{search_query}%"))
     if filter_role:
@@ -299,51 +298,46 @@ def admin_user_management():
     if filter_faculty:
         query = query.filter_by(faculty=filter_faculty)
 
-    # Execute Query with Pagination
-    # error_out=False means if we go to a page that doesn't exist, it returns empty list instead of 404
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    users = pagination.items  # Get the list of users for the current page
 
     return render_template(
         "admin_user_management.html",
-        users=users,
+        users=pagination.items,
         pagination=pagination,
         user=User.query.get(session["user_id"]),
-        faculties=faculties_list,
+        faculties=Faculty.query.all(),  # Pass dynamic faculty list
     )
 
 
-# 2. CREATE NEW USER
 @app.route("/admin/users/create", methods=["GET", "POST"])
 def admin_create_user():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
 
     if request.method == "POST":
+        # Extract form data
         mmu_id = request.form["mmu_id"]
-        name = request.form["name"]
-        email = request.form["email"]
-        password = request.form["password"]
-        faculty = request.form["faculty"]
         role = request.form["role"]
 
-        # Check if user exists
+        # Validation: Check duplicates
         if User.query.filter_by(mmu_id=mmu_id).first():
             flash(f"Error: User with MMU ID {mmu_id} already exists.", "error")
             return redirect(url_for("admin_create_user"))
-
-        if User.query.filter_by(email=email).first():
-            flash(f"Error: Email {email} is already taken.", "error")
+        if User.query.filter_by(email=request.form["email"]).first():
+            flash(f"Error: Email is already taken.", "error")
             return redirect(url_for("admin_create_user"))
 
-        # Create User Object
+        # Create User & Child Table Entry
         new_user = User(
-            mmu_id=mmu_id, name=name, email=email, faculty=faculty, user_role=role
+            mmu_id=mmu_id,
+            name=request.form["name"],
+            email=request.form["email"],
+            faculty=request.form["faculty"],
+            user_role=role,
         )
-        new_user.set_password(password)
+        new_user.set_password(request.form["password"])
         db.session.add(new_user)
 
-        # Create Child Table Entry based on Role
         if role == "Researcher":
             db.session.add(Researcher(mmu_id=mmu_id))
         elif role == "Reviewer":
@@ -353,11 +347,11 @@ def admin_create_user():
 
         try:
             db.session.commit()
-            flash(f"User {name} ({role}) created successfully!", "success")
+            flash(f"User {new_user.name} created!", "success")
             return redirect(url_for("admin_user_management"))
         except:
             db.session.rollback()
-            flash("Database Error: Could not create user.", "error")
+            flash("Database Error.", "error")
 
     return render_template(
         "admin_create_user.html",
@@ -366,36 +360,29 @@ def admin_create_user():
     )
 
 
-# 3. EDIT USER
 @app.route("/admin/users/edit/<int:user_id>", methods=["GET", "POST"])
 def admin_edit_user(user_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     target_user = User.query.get_or_404(user_id)
 
-    # Restriction: Admin cannot edit other Admins (or themselves via this route)
     if target_user.user_role == "Admin":
         flash("Action Not Allowed: You cannot edit Admin accounts.", "error")
         return redirect(url_for("admin_user_management"))
 
     if request.method == "POST":
+        # Basic Update
         target_user.name = request.form["name"]
         target_user.email = request.form["email"]
         target_user.phone_number = request.form["phone_number"]
-        target_user.faculty = request.form["faculty"]  # Admin allowed to change this
+        target_user.faculty = request.form["faculty"]
 
-        # Password update (optional)
-        new_password = request.form["password"]
-        if new_password:
-            target_user.set_password(new_password)
+        if request.form["password"]:
+            target_user.set_password(request.form["password"])
 
-        try:
-            db.session.commit()
-            flash("User details updated successfully.", "success")
-            return redirect(url_for("admin_user_management"))
-        except:
-            flash("Error updating user. Email might be duplicate.", "error")
+        db.session.commit()
+        flash("User details updated.", "success")
+        return redirect(url_for("admin_user_management"))
 
     return render_template(
         "admin_edit_user.html",
@@ -405,46 +392,33 @@ def admin_edit_user(user_id):
     )
 
 
-# 4. DELETE USER
 @app.route("/admin/users/delete/<int:user_id>", methods=["POST"])
 def admin_delete_user(user_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     user_to_delete = User.query.get_or_404(user_id)
 
-    # Restriction: Cannot delete Admins
     if user_to_delete.user_role == "Admin":
         flash("Critical Error: You cannot delete an Admin account.", "error")
     else:
         db.session.delete(user_to_delete)
         db.session.commit()
         flash("User deleted successfully.", "success")
-
     return redirect(url_for("admin_user_management"))
 
 
-# ==========================================
-# PROPOSAL MANAGEMENT (ADMIN)
-# ==========================================
-
-
-# 1. LIST ALL PROPOSALS
+# --- Proposal Management ---
 @app.route("/admin/proposals")
 def admin_proposal_management():
-    if session.get("role") != "Admin":
-        return redirect(url_for("admin_login"))
+    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
 
-    # Filters
+    # Filter and pagination
     search_query = request.args.get("search", "")
     filter_faculty = request.args.get("faculty", "")
-
     page = request.args.get("page", 1, type=int)
     per_page = 8
 
-    query = Proposal.query.join(Researcher).join(
-        User
-    )  # Join to access User.name and User.faculty
+    query = Proposal.query.join(Researcher).join(User)
 
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
@@ -452,45 +426,40 @@ def admin_proposal_management():
         query = query.filter(User.faculty == filter_faculty)
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    proposals = pagination.items
 
     return render_template(
         "admin_proposal_management.html",
-        proposals=proposals,
+        proposals=pagination.items,
         pagination=pagination,
         user=User.query.get(session["user_id"]),
+        faculties=Faculty.query.all()  
     )
 
 
-# 2. OPEN PROPOSAL SUBMISSION (Create Cycle)
 @app.route("/admin/proposals/open", methods=["GET", "POST"])
 def admin_open_cycle():
+    """Route to open a new Grant Cycle for researchers to submit proposals."""
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
 
     if request.method == "POST":
-        cycle_name = request.form["cycle_name"]
-        faculty = request.form["faculty"]
         start_date = datetime.strptime(request.form["start_date"], "%Y-%m-%d").date()
         end_date = datetime.strptime(request.form["end_date"], "%Y-%m-%d").date()
 
-        # Validation
         if end_date <= start_date:
             flash("Error: End Date must be after Start Date.", "error")
         else:
-            # Create Cycle
-            # Need Admin ID
             admin = Admin.query.filter_by(mmu_id=session["user_id"]).first()
             new_cycle = GrantCycle(
-                cycle_name=cycle_name,
-                faculty=faculty,
+                cycle_name=request.form["cycle_name"],
+                faculty=request.form["faculty"],
                 start_date=start_date,
                 end_date=end_date,
                 admin_id=admin.admin_id,
             )
             db.session.add(new_cycle)
             db.session.commit()
-            flash(f"Submission Cycle '{cycle_name}' Opened for {faculty}!", "success")
+            flash("Submission Cycle Opened!", "success")
             return redirect(url_for("admin_proposal_management"))
 
     return render_template(
@@ -500,93 +469,73 @@ def admin_open_cycle():
     )
 
 
-# 3. VIEW PROPOSAL DETAILS
 @app.route("/admin/proposals/view/<int:proposal_id>")
 def admin_view_proposal(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     proposal = Proposal.query.get_or_404(proposal_id)
 
-    # Fetch existing deadlines if any
-    reviewer_deadline = Deadline.query.filter_by(
-        proposal_id=proposal.proposal_id, deadline_type="Reviewer"
-    ).first()
-    hod_deadline = Deadline.query.filter_by(
-        proposal_id=proposal.proposal_id, deadline_type="HOD"
-    ).first()
-    final_deadline = Deadline.query.filter_by(
-        proposal_id=proposal.proposal_id, deadline_type="Final Submission"
-    ).first()
+    # Fetch existing deadlines for display
+    deadlines = {
+        "Reviewer": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+        ).first(),
+        "HOD": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="HOD"
+        ).first(),
+        "Final": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+        ).first(),
+    }
 
     return render_template(
         "admin_view_proposal.html",
         proposal=proposal,
         user=User.query.get(session["user_id"]),
-        reviewer_deadline=reviewer_deadline,
-        hod_deadline=hod_deadline,
-        final_deadline=final_deadline,
+        reviewer_deadline=deadlines["Reviewer"],
+        hod_deadline=deadlines["HOD"],
+        final_deadline=deadlines["Final"],
     )
 
 
-# 4. ASSIGN EVALUATORS & SET DEADLINES
 @app.route("/admin/proposals/assign/<int:proposal_id>", methods=["GET", "POST"])
 def admin_assign_evaluators(proposal_id):
+    """Assigns Reviewer & HOD and sets their specific deadlines."""
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     proposal = Proposal.query.get_or_404(proposal_id)
-    researcher_faculty = proposal.researcher.user_info.faculty
 
     if request.method == "POST":
-        # 1. Assign Reviewer
-        reviewer_id = request.form.get("reviewer_id")
-        if reviewer_id:
-            proposal.assigned_reviewer_id = reviewer_id
+        if request.form.get("reviewer_id"):
+            proposal.assigned_reviewer_id = request.form.get("reviewer_id")
+        if request.form.get("hod_id"):
+            proposal.assigned_hod_id = request.form.get("hod_id")
 
-        # 2. Assign HOD
-        hod_id = request.form.get("hod_id")
-        if hod_id:
-            proposal.assigned_hod_id = hod_id
-
-        # 3. Set Deadlines
-        rev_date = request.form.get("reviewer_deadline")
-        hod_date = request.form.get("hod_deadline")
-
-        if rev_date:
-            # Update or Create Deadline entry
-            dl = Deadline.query.filter_by(
-                proposal_id=proposal.proposal_id, deadline_type="Reviewer"
-            ).first()
-            if not dl:
-                dl = Deadline(
-                    proposal_id=proposal.proposal_id, deadline_type="Reviewer"
-                )
-            dl.due_date = datetime.strptime(rev_date, "%Y-%m-%d").date()
-            db.session.add(dl)
-
-        if hod_date:
-            dl = Deadline.query.filter_by(
-                proposal_id=proposal.proposal_id, deadline_type="HOD"
-            ).first()
-            if not dl:
-                dl = Deadline(proposal_id=proposal.proposal_id, deadline_type="HOD")
-            dl.due_date = datetime.strptime(hod_date, "%Y-%m-%d").date()
-            db.session.add(dl)
+        # Set Deadlines
+        for role_type in ["Reviewer", "HOD"]:
+            date_val = request.form.get(f"{role_type.lower()}_deadline")
+            if date_val:
+                dl = Deadline.query.filter_by(
+                    proposal_id=proposal.proposal_id, deadline_type=role_type
+                ).first()
+                if not dl:
+                    dl = Deadline(
+                        proposal_id=proposal.proposal_id, deadline_type=role_type
+                    )
+                dl.due_date = datetime.strptime(date_val, "%Y-%m-%d").date()
+                db.session.add(dl)
 
         proposal.status = "Under Review"
         db.session.commit()
-        flash("Evaluators assigned and deadlines set successfully.", "success")
+        flash("Evaluators assigned and deadlines set.", "success")
         return redirect(
             url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
         )
 
-    # GET: Fetch potential reviewers/HODs from the SAME faculty
-    # Using a join to filter by User.faculty
-    reviewers = (
-        Reviewer.query.join(User).filter(User.faculty == researcher_faculty).all()
-    )
-    hods = HOD.query.join(User).filter(User.faculty == researcher_faculty).all()
+    # Fetch eligible evaluators (Same Faculty)
+    faculty = proposal.researcher.user_info.faculty
+    reviewers = Reviewer.query.join(User).filter(User.faculty == faculty).all()
+    hods = HOD.query.join(User).filter(User.faculty == faculty).all()
 
     return render_template(
         "admin_assign_evaluators.html",
@@ -597,20 +546,14 @@ def admin_assign_evaluators(proposal_id):
     )
 
 
-# 5. SET FINAL RESEARCH DEADLINE
 @app.route("/admin/proposals/final_deadline/<int:proposal_id>", methods=["POST"])
 def admin_set_final_deadline(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
-
     proposal = Proposal.query.get_or_404(proposal_id)
 
-    # Requirement: Cannot set final deadline if evaluators not assigned
     if not proposal.assigned_reviewer_id or not proposal.assigned_hod_id:
-        flash(
-            "Error: You must assign Evaluators before setting the Final Research Deadline.",
-            "error",
-        )
+        flash("Error: Assign Evaluators first.", "error")
         return redirect(
             url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
         )
@@ -627,52 +570,43 @@ def admin_set_final_deadline(proposal_id):
         dl.due_date = datetime.strptime(final_date, "%Y-%m-%d").date()
         db.session.add(dl)
         db.session.commit()
-        flash("Final Research Submission Deadline Set!", "success")
+        flash("Final Deadline Set!", "success")
 
     return redirect(url_for("admin_view_proposal", proposal_id=proposal.proposal_id))
 
 
-# ==========================================
-# MAINTAIN SYSTEM DATA (Faculties & Research Areas)
-# ==========================================
-
-
+# --- System Data Management ---
 @app.route("/admin/system_data", methods=["GET", "POST"])
 def admin_system_data():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
 
     if request.method == "POST":
-        # Handle Adding New Data
-        type_added = request.form.get("type")  # 'faculty' or 'area'
+        type_added = request.form.get("type")
         name_added = request.form.get("name").strip()
 
+        # Check existing and Add
         if type_added == "faculty":
             if Faculty.query.filter_by(name=name_added).first():
-                flash(f"Error: Faculty '{name_added}' already exists.", "error")
+                flash(f"Error: Faculty '{name_added}' exists.", "error")
             else:
                 db.session.add(Faculty(name=name_added))
                 db.session.commit()
-                flash(f"Faculty '{name_added}' added successfully.", "success")
-
+                flash("Faculty added.", "success")
         elif type_added == "area":
             if ResearchArea.query.filter_by(name=name_added).first():
-                flash(f"Error: Research Area '{name_added}' already exists.", "error")
+                flash(f"Error: Area '{name_added}' exists.", "error")
             else:
                 db.session.add(ResearchArea(name=name_added))
                 db.session.commit()
-                flash(f"Research Area '{name_added}' added successfully.", "success")
+                flash("Research Area added.", "success")
 
         return redirect(url_for("admin_system_data"))
 
-    # Fetch lists to display
-    faculties = Faculty.query.all()
-    areas = ResearchArea.query.all()
-
     return render_template(
         "admin_system_data.html",
-        faculties=faculties,
-        areas=areas,
+        faculties=Faculty.query.all(),
+        areas=ResearchArea.query.all(),
         user=User.query.get(session["user_id"]),
     )
 
@@ -682,40 +616,36 @@ def admin_edit_system_data():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
 
-    item_type = request.form.get("type")
     item_id = request.form.get("id")
     new_name = request.form.get("name").strip()
 
-    if item_type == "faculty":
-        item = Faculty.query.get(item_id)
-        item.name = new_name
-    elif item_type == "area":
-        item = ResearchArea.query.get(item_id)
-        item.name = new_name
+    if request.form.get("type") == "faculty":
+        Faculty.query.get(item_id).name = new_name
+    elif request.form.get("type") == "area":
+        ResearchArea.query.get(item_id).name = new_name
 
     db.session.commit()
-    flash("Item updated successfully.", "success")
+    flash("Item updated.", "success")
     return redirect(url_for("admin_system_data"))
 
 
-# ==========================================
-# 2. RESEARCHER ROUTES
-# ==========================================
+# ===============================================================================
+#                                 RESEARCHER MODULE
+# ===============================================================================
+
+
 @app.route("/researcher/login", methods=["POST", "GET"])
 def researcher_login():
     if request.method == "POST":
-        mmu_id = request.form["mmu_id"]
-        password = request.form["password"]
-        user = User.query.filter_by(mmu_id=mmu_id, user_role="Researcher").first()
-
-        if user and user.check_password(password):
+        user = User.query.filter_by(
+            mmu_id=request.form["mmu_id"], user_role="Researcher"
+        ).first()
+        if user and user.check_password(request.form["password"]):
             session["user_id"] = user.mmu_id
             session["role"] = "Researcher"
-            session["name"] = user.name
             return redirect(url_for("researcher_dashboard"))
         else:
-            flash("Invalid Researcher credentials.", "error")
-
+            flash("Invalid credentials.", "error")
     return render_template("researcher_login.html")
 
 
@@ -723,92 +653,69 @@ def researcher_login():
 def researcher_dashboard():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-
-    user = User.query.get(session["user_id"])  # Get latest user data
     stats = {"my_proposals": 3, "active_grants": 1, "pending_reports": 2}
-    return render_template("researcher_dashboard.html", stats=stats, user=user)
+    return render_template(
+        "researcher_dashboard.html",
+        stats=stats,
+        user=User.query.get(session["user_id"]),
+    )
 
 
 @app.route("/researcher/profile", methods=["GET", "POST"])
 def researcher_profile():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-
     user = User.query.get(session["user_id"])
-
     if request.method == "POST":
         if update_user_profile(user, request.form, request.files):
             return redirect(url_for("researcher_profile"))
-
     return render_template("researcher_profile.html", user=user)
 
 
-# ==========================================
-# RESEARCHER: SUBMIT PROPOSAL
-# ==========================================
-
-
-# 1. LIST OPEN CYCLES (Where Researcher chooses what to apply for)
 @app.route("/researcher/apply")
 def researcher_apply_list():
+    """Lists open grant cycles available for application."""
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-
     today = datetime.now().date()
-    user = User.query.get(session["user_id"])
-
-    # Filter Logic
-    filter_faculty = request.args.get("faculty", "")
 
     query = GrantCycle.query.filter(
         GrantCycle.start_date <= today,
         GrantCycle.end_date >= today,
         GrantCycle.is_open == True,
     )
-
-    # If user selects a specific faculty, apply filter. Otherwise, show ALL.
-    if filter_faculty:
-        query = query.filter(GrantCycle.faculty == filter_faculty)
-
-    active_cycles = query.all()
+    if request.args.get("faculty"):
+        query = query.filter(GrantCycle.faculty == request.args.get("faculty"))
 
     return render_template(
         "researcher_apply_list.html",
-        cycles=active_cycles,
-        user=user,
+        cycles=query.all(),
+        user=User.query.get(session["user_id"]),
         faculties=Faculty.query.all(),
     )
 
 
-# 2. SUBMISSION FORM
 @app.route("/researcher/apply/<int:cycle_id>", methods=["GET", "POST"])
 def researcher_submit_form(cycle_id):
+    """Handles proposal submission and file upload."""
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-
     cycle = GrantCycle.query.get_or_404(cycle_id)
     user = User.query.get(session["user_id"])
-    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
 
     if request.method == "POST":
-        title = request.form["title"]
-        research_area = request.form["research_area"]
-        budget = request.form["budget"]
-
-        # FILE UPLOAD LOGIC
-        document_filename = None
-        if "proposal_file" in request.files:
-            file = request.files["proposal_file"]
-            if file and allowed_file(file.filename):
-                document_filename = save_document(file)
-            else:
-                flash("Error: Invalid file type. Please upload PDF or DOCX.", "error")
-                return redirect(request.url)
-        else:
-            flash("Error: You must upload a proposal document.", "error")
+        # Handle File Upload
+        if "proposal_file" not in request.files:
+            flash("Error: Document required.", "error")
+            return redirect(request.url)
+        file = request.files["proposal_file"]
+        if not (file and allowed_file(file.filename)):
+            flash("Error: Invalid file type.", "error")
             return redirect(request.url)
 
-        # Create Proposal Record
+        doc_filename = save_document(file)
+
+        # Create Proposal
         new_proposal = Proposal(
             title=request.form["title"],
             research_area=request.form["research_area"],
@@ -818,20 +725,19 @@ def researcher_submit_form(cycle_id):
             .first()
             .researcher_id,
             cycle_id=cycle.cycle_id,
-            document_file=document_filename,
+            document_file=doc_filename,
         )
         db.session.add(new_proposal)
         db.session.commit()
 
-        # --- NEW: NOTIFY ADMIN ---
-        # Find the Admin who created this cycle (or just the first super admin)
-        admin_recipient = User.query.filter_by(user_role="Admin").first()
-        if admin_recipient:
-            msg = f"New Proposal Submitted: '{new_proposal.title}' by {user.name}."
+        # Notify Admin
+        admin = User.query.filter_by(user_role="Admin").first()
+        if admin:
+            msg = f"New Proposal: '{new_proposal.title}' by {user.name}."
             link = url_for("admin_view_proposal", proposal_id=new_proposal.proposal_id)
-            send_notification(admin_recipient.mmu_id, msg, link, sender_id=user.mmu_id)
+            send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
 
-        flash("Proposal submitted! Admin has been notified.", "success")
+        flash("Proposal submitted!", "success")
         return redirect(url_for("researcher_dashboard"))
 
     return render_template(
@@ -842,24 +748,24 @@ def researcher_submit_form(cycle_id):
     )
 
 
-# ==========================================
-# 3. REVIEWER ROUTES
-# ==========================================
+# =====================================================================
+#                            REVIEWER MODULE
+# =====================================================================
+
+
+
 @app.route("/reviewer/login", methods=["POST", "GET"])
 def reviewer_login():
     if request.method == "POST":
-        mmu_id = request.form["mmu_id"]
-        password = request.form["password"]
-        user = User.query.filter_by(mmu_id=mmu_id, user_role="Reviewer").first()
-
-        if user and user.check_password(password):
+        user = User.query.filter_by(
+            mmu_id=request.form["mmu_id"], user_role="Reviewer"
+        ).first()
+        if user and user.check_password(request.form["password"]):
             session["user_id"] = user.mmu_id
             session["role"] = "Reviewer"
-            session["name"] = user.name
             return redirect(url_for("reviewer_dashboard"))
         else:
-            flash("Invalid Reviewer credentials.", "error")
-
+            flash("Invalid credentials.", "error")
     return render_template("reviewer_login.html")
 
 
@@ -867,44 +773,42 @@ def reviewer_login():
 def reviewer_dashboard():
     if session.get("role") != "Reviewer":
         return redirect(url_for("reviewer_login"))
-
-    user = User.query.get(session["user_id"])
-    stats = {"pending_reviews": 5, "completed_reviews": 12}
-    return render_template("reviewer_dashboard.html", stats=stats, user=user)
+    return render_template(
+        "reviewer_dashboard.html",
+        stats={"pending_reviews": 5},
+        user=User.query.get(session["user_id"]),
+    )
 
 
 @app.route("/reviewer/profile", methods=["GET", "POST"])
 def reviewer_profile():
     if session.get("role") != "Reviewer":
         return redirect(url_for("reviewer_login"))
-
     user = User.query.get(session["user_id"])
-
     if request.method == "POST":
         if update_user_profile(user, request.form, request.files):
             return redirect(url_for("reviewer_profile"))
-
     return render_template("reviewer_profile.html", user=user)
 
 
-# ==========================================
-# 4. HOD ROUTES
-# ==========================================
+# =====================================================================
+#                            HOD MODULE
+# =====================================================================
+
+
+
 @app.route("/hod/login", methods=["POST", "GET"])
 def hod_login():
     if request.method == "POST":
-        mmu_id = request.form["mmu_id"]
-        password = request.form["password"]
-        user = User.query.filter_by(mmu_id=mmu_id, user_role="HOD").first()
-
-        if user and user.check_password(password):
+        user = User.query.filter_by(
+            mmu_id=request.form["mmu_id"], user_role="HOD"
+        ).first()
+        if user and user.check_password(request.form["password"]):
             session["user_id"] = user.mmu_id
             session["role"] = "HOD"
-            session["name"] = user.name
             return redirect(url_for("hod_dashboard"))
         else:
-            flash("Invalid HOD credentials.", "error")
-
+            flash("Invalid credentials.", "error")
     return render_template("hod_login.html")
 
 
@@ -912,26 +816,27 @@ def hod_login():
 def hod_dashboard():
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-
-    user = User.query.get(session["user_id"])
-    stats = {"approvals_pending": 8, "budget_allocated": "RM 50,000"}
-    return render_template("hod_dashboard.html", stats=stats, user=user)
+    return render_template(
+        "hod_dashboard.html",
+        stats={"approvals_pending": 8},
+        user=User.query.get(session["user_id"]),
+    )
 
 
 @app.route("/hod/profile", methods=["GET", "POST"])
 def hod_profile():
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-
     user = User.query.get(session["user_id"])
-
     if request.method == "POST":
         if update_user_profile(user, request.form, request.files):
             return redirect(url_for("hod_profile"))
-
     return render_template("hod_profile.html", user=user)
 
 
+# ==================================================================
+#                          MAIN EXECUTION
+# ==================================================================
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
