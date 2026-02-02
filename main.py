@@ -360,7 +360,7 @@ def admin_create_user():
     )
 
 
-@app.route("/admin/users/edit/<int:user_id>", methods=["GET", "POST"])
+@app.route("/admin/users/edit/<string:user_id>", methods=["GET", "POST"])
 def admin_edit_user(user_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
@@ -392,7 +392,7 @@ def admin_edit_user(user_id):
     )
 
 
-@app.route("/admin/users/delete/<int:user_id>", methods=["POST"])
+@app.route("/admin/users/delete/<string:user_id>", methods=["POST"])
 def admin_delete_user(user_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
@@ -410,7 +410,8 @@ def admin_delete_user(user_id):
 # --- Proposal Management ---
 @app.route("/admin/proposals")
 def admin_proposal_management():
-    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
 
     # Filter and pagination
     search_query = request.args.get("search", "")
@@ -432,7 +433,7 @@ def admin_proposal_management():
         proposals=pagination.items,
         pagination=pagination,
         user=User.query.get(session["user_id"]),
-        faculties=Faculty.query.all()  
+        faculties=Faculty.query.all(),
     )
 
 
@@ -703,6 +704,13 @@ def researcher_submit_form(cycle_id):
     cycle = GrantCycle.query.get_or_404(cycle_id)
     user = User.query.get(session["user_id"])
 
+    # If the researcher's faculty doesn't match the grant's faculty, block access.
+    if user.faculty != cycle.faculty:
+        flash(
+            f"Access Denied: You are not eligible for {cycle.faculty} grants.", "error"
+        )
+        return redirect(url_for("researcher_apply_list"))
+
     if request.method == "POST":
         # Handle File Upload
         if "proposal_file" not in request.files:
@@ -753,7 +761,6 @@ def researcher_submit_form(cycle_id):
 # =====================================================================
 
 
-
 @app.route("/reviewer/login", methods=["POST", "GET"])
 def reviewer_login():
     if request.method == "POST":
@@ -794,7 +801,6 @@ def reviewer_profile():
 # =====================================================================
 #                            HOD MODULE
 # =====================================================================
-
 
 
 @app.route("/hod/login", methods=["POST", "GET"])

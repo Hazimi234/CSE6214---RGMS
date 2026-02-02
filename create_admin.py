@@ -28,13 +28,12 @@ def create_admin_user():
         db.create_all()
 
         # 2. Check if admin already exists to avoid duplicates
-        existing_admin = User.query.filter_by(mmu_id=1001).first()
+        existing_admin = User.query.filter_by(mmu_id="242UC244PU").first()
         if existing_admin:
             print("Admin user already exists!")
             return
 
         # 3. Create the User Record
-        # We use mmu_id 1001 and password 'admin123' for testing
         new_user = User(
             mmu_id="242UC244PU",
             name="Meor Hazimi",
@@ -43,18 +42,18 @@ def create_admin_user():
             faculty="FCI",
             user_role="Admin"
         )
-        new_user.set_password("admin123") # Hashes the password
+        new_user.set_password("123") # Hashes the password
         
         db.session.add(new_user)
         db.session.commit()
 
         # 4. Create the Admin Profile Record
-        new_admin_profile = Admin(mmu_id=1001)
+        new_admin_profile = Admin(mmu_id="242UC244PU")
         db.session.add(new_admin_profile)
         db.session.commit()
 
         print("SUCCESS: Admin user created.")
-        print("Login with MMU ID: 1001")
+        print("Login with MMU ID: 242UC244PU")
         print("Password: admin123")
 
 if __name__ == "__main__":
