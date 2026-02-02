@@ -848,6 +848,18 @@ def hod_assigned_proposals():
         user=User.query.get(session["user_id"]),
     )
 
+@app.route("/hod/proposals/view/<int:proposal_id>")
+def hod_view_proposal(proposal_id):
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    return render_template(
+        "hod_view_proposal.html",
+        proposal=proposal,
+        user=User.query.get(session["user_id"]),
+    )
+
 # ==================================================================
 #                          MAIN EXECUTION
 # ==================================================================

@@ -64,28 +64,33 @@
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f1f8e9; color: #1b5e20;">
+                                <th style="padding: 15px;">ID</th>
                                 <th style="padding: 15px;">Title</th>
-                                <th style="padding: 15px;">Researcher Name</th>
+                                <th style="padding: 15px;">Researcher</th>
+                                <th style="padding: 15px;">Faculty</th>
                                 <th style="padding: 15px;">Requested Budget</th>
-                                <th style="padding: 15px;">Approved Amount</th>
-                                <th style="padding: 15px;">Current Status</th>
+                                <th style="padding: 15px;">Status</th>
                                 <th style="padding: 15px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for proposal in proposals %}
+                            {% for p in proposals %}
                             <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;">{{ proposal.title }}</td>
-                                <td style="padding: 15px;">{{ proposal.researcher.user_info.name }}</td>
-                                <td style="padding: 15px;">RM {{ "%.2f"|format(proposal.requested_budget) }}</td>
-                                <td style="padding: 15px;">RM {{ "%.2f"|format(proposal.approved_amount) }}</td>
+                                <td style="padding: 15px;">{{ p.proposal_id }}</td>
+                                <td style="padding: 15px;">{{ p.title }}</td>
+                                <td style="padding: 15px;">{{ p.researcher.user_info.name }}</td>
+                                <td style="padding: 15px;">{{ p.researcher.user_info.faculty }}</td>
+                                <td style="padding: 15px;">RM {{ "%.2f"|format(p.requested_budget) }}</td>
                                 <td style="padding: 15px;">
                                     <span style="padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; background: #e3f2fd; color:#1565c0;">
-                                        {{ proposal.status }}
+                                        {{ p.status }}
                                     </span>
                                 </td>
                                 <td style="padding: 15px;">
-                                    <a href="/hod/proposal/{{ proposal.proposal_id }}" class="btn-primary" style="padding: 5px 10px; font-size: 0.8rem; text-decoration: none;">View Details</a>
+                                    <a href="{{ url_for('hod_view_proposal', proposal_id=p.proposal_id) }}"
+                                        class="btn-outline" style="padding: 5px 10px; font-size: 0.8rem;">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
                                 </td>
                             </tr>
                             {% else %}
