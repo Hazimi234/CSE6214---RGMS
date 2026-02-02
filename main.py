@@ -834,6 +834,20 @@ def hod_profile():
     return render_template("hod_profile.html", user=user)
 
 
+@app.route("/hod/proposals")
+def hod_assigned_proposals():
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+
+    current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
+    proposals = Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id).all()
+
+    return render_template(
+        "hod_assigned_proposals.html",
+        proposals=proposals,
+        user=User.query.get(session["user_id"]),
+    )
+
 # ==================================================================
 #                          MAIN EXECUTION
 # ==================================================================

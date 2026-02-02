@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>HOD Dashboard - GrantSysMMU</title>
+    <title>Assigned Proposals - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -14,11 +14,10 @@
             <div class="sidebar-header"><i class="fas fa-building"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li class="active"><a href="{{ url_for('hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
-                </li>
+                <li><a href="{{ url_for('hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="{{ url_for('hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i> Assigned
-                        Proposals</a></li>
+                <li class="active"><a href="{{ url_for('hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i>
+                        Assigned Proposals</a></li>
                 <li><a href="#"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
                 <li><a href="#"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
                 <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Budget</a></li>
@@ -27,9 +26,10 @@
                 </li>
             </ul>
         </div>
+
         <div class="main-content">
             <div class="top-bar">
-                <h2>HOD Dashboard</h2>
+                <h2>Assigned Proposals</h2>
 
                 <div style="display: flex; align-items: center; gap: 25px;">
                     <a href="{{ url_for('view_notifications') }}"
@@ -50,7 +50,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">HOD</small>
                         </div>
-                        <a href="{{ url_for('hod_dashboard') }}">
+                        <a href="{{ url_for('hod_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
                                 alt="Profile"
                                 style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
@@ -58,22 +58,43 @@
                     </div>
                 </div>
             </div>
+
             <div class="content-wrapper">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.approvals_pending }}</h3>
-                            <p>Approvals Pending</p>
-                        </div>
-                        <i class="fas fa-gavel stat-icon"></i>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.budget_allocated }}</h3>
-                            <p>Funds Allocated</p>
-                        </div>
-                        <i class="fas fa-coins stat-icon"></i>
-                    </div>
+                <div class="table-card">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f8e9; color: #1b5e20;">
+                                <th style="padding: 15px;">Title</th>
+                                <th style="padding: 15px;">Researcher Name</th>
+                                <th style="padding: 15px;">Requested Budget</th>
+                                <th style="padding: 15px;">Approved Amount</th>
+                                <th style="padding: 15px;">Current Status</th>
+                                <th style="padding: 15px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proposal in proposals %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 15px;">{{ proposal.title }}</td>
+                                <td style="padding: 15px;">{{ proposal.researcher.user_info.name }}</td>
+                                <td style="padding: 15px;">RM {{ "%.2f"|format(proposal.requested_budget) }}</td>
+                                <td style="padding: 15px;">RM {{ "%.2f"|format(proposal.approved_amount) }}</td>
+                                <td style="padding: 15px;">
+                                    <span style="padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; background: #e3f2fd; color:#1565c0;">
+                                        {{ proposal.status }}
+                                    </span>
+                                </td>
+                                <td style="padding: 15px;">
+                                    <a href="/hod/proposal/{{ proposal.proposal_id }}" class="btn-primary" style="padding: 5px 10px; font-size: 0.8rem; text-decoration: none;">View Details</a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" style="padding: 20px; text-align: center; color: #777;">No proposals assigned to you yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -63,6 +63,7 @@ class GrantCycle(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     is_open = db.Column(db.Boolean, default=True, nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.admin_id'), nullable=False)
+    cycle_budget = db.Column(db.Float, default=0.0) 
     
     # KEEP THIS ONE: It creates the 'cycle' backref for Proposals
     proposals = db.relationship('Proposal', backref='cycle', lazy=True)
@@ -84,10 +85,26 @@ class Proposal(db.Model):
     assigned_reviewer_id = db.Column(db.Integer, db.ForeignKey('reviewer.reviewer_id'), nullable=True)
     assigned_hod_id = db.Column(db.Integer, db.ForeignKey('hod.hod_id'), nullable=True)
 
+    approved_amount = db.Column(db.Float, default=0.0) # How much HOD actually gives
+
     # Relations
     reviewer = db.relationship('Reviewer', foreign_keys=[assigned_reviewer_id])
     hod = db.relationship('HOD', foreign_keys=[assigned_hod_id])
     deadlines = db.relationship('Deadline', backref='proposal', cascade="all, delete-orphan")
+
+# For "Monitor and Validate Progress Reports"
+class ProgressReport(db.Model):
+    __tablename__ = 'progress_report'
+    report_id = db.Column(db.Integer, primary_key=True)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.proposal_id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False) # Project updates
+    financial_usage = db.Column(db.Float, nullable=False) # Money spent so far
+    document_file = db.Column(db.String(100), nullable=True) # PDF attachment
+    status = db.Column(db.String(50), default="Submitted") # "Validated", "Requires Revision"
+    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    proposal = db.relationship('Proposal', backref='reports')
 
 # Based on Data Dictionary 3.2.11
 class Deadline(db.Model):
