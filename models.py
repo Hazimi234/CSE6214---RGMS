@@ -63,7 +63,6 @@ class GrantCycle(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     is_open = db.Column(db.Boolean, default=True, nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey('admin.admin_id'), nullable=False)
-    cycle_budget = db.Column(db.Float, default=0.0) 
     
     # KEEP THIS ONE: It creates the 'cycle' backref for Proposals
     proposals = db.relationship('Proposal', backref='cycle', lazy=True)
