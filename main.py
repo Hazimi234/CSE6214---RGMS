@@ -434,64 +434,73 @@ def admin_delete_user(user_id):
 # ======================================================
 @app.route("/admin/proposals")
 def admin_proposal_management():
-    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
 
-    # FILTERS FOR CYCLES
     search_query = request.args.get("search", "")
     filter_faculty = request.args.get("faculty", "")
 
+    # Pagination Setup
+    page = request.args.get("page", 1, type=int)
+    per_page = 6  # Show 6 cycles per page
+
     query = GrantCycle.query
 
-    # Filter by Cycle Name
     if search_query:
         query = query.filter(GrantCycle.cycle_name.ilike(f"%{search_query}%"))
-    
-    # Filter by Faculty
     if filter_faculty:
         query = query.filter(GrantCycle.faculty == filter_faculty)
 
-    # Order by newest first
-    cycles = query.order_by(GrantCycle.start_date.desc()).all()
+    # Use .paginate() instead of .all()
+    pagination = query.order_by(GrantCycle.start_date.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    cycles = pagination.items
 
     return render_template(
         "admin_proposal_management.html",
         cycles=cycles,
+        pagination=pagination,  # Pass pagination object
         user=User.query.get(session["user_id"]),
-        faculties=Faculty.query.all() # For the Faculty Dropdown
+        faculties=Faculty.query.all(),
     )
+
 
 # ======================================================
 # LEVEL 2: LIST PROPOSALS INSIDE A CYCLE (The "Files")
 # ======================================================
 @app.route("/admin/proposals/cycle/<int:cycle_id>")
 def admin_view_cycle_proposals(cycle_id):
-    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
-    
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
     cycle = GrantCycle.query.get_or_404(cycle_id)
-    
-    # FILTERS FOR PROPOSALS
+
     search_proposal = request.args.get("search", "")
     filter_area = request.args.get("area", "")
 
-    # Start with proposals belonging to THIS cycle only
+    # Pagination Setup
+    page = request.args.get("page", 1, type=int)
+    per_page = 8  # Show 8 proposals per page
+
     query = Proposal.query.filter_by(cycle_id=cycle.cycle_id)
 
-    # Search by Proposal Title
     if search_proposal:
         query = query.filter(Proposal.title.ilike(f"%{search_proposal}%"))
-
-    # Filter by Research Area (Requested Feature)
     if filter_area:
         query = query.filter(Proposal.research_area == filter_area)
 
-    proposals = query.all()
-    
+    # Use .paginate()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    proposals = pagination.items
+
     return render_template(
         "admin_cycle_proposals.html",
         cycle=cycle,
         proposals=proposals,
+        pagination=pagination,  # Pass pagination object
         user=User.query.get(session["user_id"]),
-        research_areas=ResearchArea.query.all() # For the Area Dropdown
+        research_areas=ResearchArea.query.all(),
     )
 
 
