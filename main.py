@@ -5,6 +5,7 @@ from flask import Flask, redirect, url_for, render_template, request, session, f
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from werkzeug.utils import secure_filename
+from sqlalchemy import func
 
 # Import Database Models
 from models import (
@@ -20,6 +21,8 @@ from models import (
     Notification,
     Faculty,
     ResearchArea,
+    Budget,
+    Grant,
 )
 
 # ============================================================================
@@ -257,11 +260,29 @@ def admin_dashboard():
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
     user = User.query.get(session["user_id"])
+
+    # 1. Budget Stats
+    total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
+    total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
+    remaining_balance = total_budget_in - total_grants_out
+
+    # Avoid division by zero for progress bar
+    budget_percent = (
+        (total_grants_out / total_budget_in * 100) if total_budget_in > 0 else 0
+    )
+
+    # 2. Proposal Stats
     stats = {
-        "pending_proposals": 12,
-        "active_grants": 45,
-        "total_users": 150,
-    }  # Placeholder stats
+        "total_cycles": GrantCycle.query.count(),
+        "open_cycles": GrantCycle.query.filter_by(is_open=True).count(),
+        "submitted": Proposal.query.filter_by(status="Submitted").count(),
+        "under_review": Proposal.query.filter_by(status="Under Review").count(),
+        "approved": Proposal.query.filter_by(status="Approved").count(),
+        "budget_percent": round(budget_percent, 1),
+        "total_budget": total_budget_in,
+        "remaining": remaining_balance,
+    }
+
     return render_template("admin_dashboard.html", stats=stats, user=user)
 
 
@@ -408,32 +429,69 @@ def admin_delete_user(user_id):
 
 
 # --- Proposal Management ---
+# ======================================================
+# LEVEL 1: LIST ALL GRANT CYCLES (The "Folders")
+# ======================================================
 @app.route("/admin/proposals")
 def admin_proposal_management():
-    if session.get("role") != "Admin":
-        return redirect(url_for("admin_login"))
+    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
 
-    # Filter and pagination
+    # FILTERS FOR CYCLES
     search_query = request.args.get("search", "")
     filter_faculty = request.args.get("faculty", "")
-    page = request.args.get("page", 1, type=int)
-    per_page = 8
 
-    query = Proposal.query.join(Researcher).join(User)
+    query = GrantCycle.query
 
+    # Filter by Cycle Name
     if search_query:
-        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+        query = query.filter(GrantCycle.cycle_name.ilike(f"%{search_query}%"))
+    
+    # Filter by Faculty
     if filter_faculty:
-        query = query.filter(User.faculty == filter_faculty)
+        query = query.filter(GrantCycle.faculty == filter_faculty)
 
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    # Order by newest first
+    cycles = query.order_by(GrantCycle.start_date.desc()).all()
 
     return render_template(
         "admin_proposal_management.html",
-        proposals=pagination.items,
-        pagination=pagination,
+        cycles=cycles,
         user=User.query.get(session["user_id"]),
-        faculties=Faculty.query.all(),
+        faculties=Faculty.query.all() # For the Faculty Dropdown
+    )
+
+# ======================================================
+# LEVEL 2: LIST PROPOSALS INSIDE A CYCLE (The "Files")
+# ======================================================
+@app.route("/admin/proposals/cycle/<int:cycle_id>")
+def admin_view_cycle_proposals(cycle_id):
+    if session.get("role") != "Admin": return redirect(url_for("admin_login"))
+    
+    cycle = GrantCycle.query.get_or_404(cycle_id)
+    
+    # FILTERS FOR PROPOSALS
+    search_proposal = request.args.get("search", "")
+    filter_area = request.args.get("area", "")
+
+    # Start with proposals belonging to THIS cycle only
+    query = Proposal.query.filter_by(cycle_id=cycle.cycle_id)
+
+    # Search by Proposal Title
+    if search_proposal:
+        query = query.filter(Proposal.title.ilike(f"%{search_proposal}%"))
+
+    # Filter by Research Area (Requested Feature)
+    if filter_area:
+        query = query.filter(Proposal.research_area == filter_area)
+
+    proposals = query.all()
+    
+    return render_template(
+        "admin_cycle_proposals.html",
+        cycle=cycle,
+        proposals=proposals,
+        user=User.query.get(session["user_id"]),
+        research_areas=ResearchArea.query.all() # For the Area Dropdown
     )
 
 
@@ -574,6 +632,96 @@ def admin_set_final_deadline(proposal_id):
         flash("Final Deadline Set!", "success")
 
     return redirect(url_for("admin_view_proposal", proposal_id=proposal.proposal_id))
+
+
+# ------------ Budget Tracking ----------------- #
+@app.route("/admin/budget", methods=["GET", "POST"])
+def admin_budget_tracking():
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    # 1. HANDLE ADDING BUDGET (Money In)
+    if request.method == "POST":
+        try:
+            amount = float(request.form["amount"])
+            description = request.form["description"]
+
+            # Create Budget Record
+            new_budget = Budget(
+                amount=amount, description=description, admin_id=session["user_id"]
+            )
+            db.session.add(new_budget)
+            db.session.commit()
+            flash(
+                f"Successfully added RM {amount:,.2f} to the system budget.", "success"
+            )
+        except ValueError:
+            flash("Error: Invalid amount entered.", "error")
+        return redirect(url_for("admin_budget_tracking"))
+
+    # 2. CALCULATE STATS
+    # Sum of all Budget records (Money In)
+    total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
+
+    # Sum of all Grant records (Money Out/Awarded)
+    total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
+
+    current_balance = total_budget_in - total_grants_out
+
+    # 3. FETCH HISTORY
+    budget_history = Budget.query.order_by(Budget.created_at.desc()).all()
+
+    # Fetch Allocated Grants
+    active_grants = Grant.query.order_by(Grant.award_date.desc()).all()
+
+    return render_template(
+        "admin_budget_tracking.html",
+        user=User.query.get(session["user_id"]),
+        total_fund=total_budget_in,
+        total_allocated=total_grants_out,
+        current_balance=current_balance,
+        budget_history=budget_history,
+        active_grants=active_grants,
+    )
+
+
+# 1. EDIT BUDGET ROUTE
+@app.route("/admin/budget/edit/<int:budget_id>", methods=["POST"])
+def admin_edit_budget(budget_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    budget = Budget.query.get_or_404(budget_id)
+
+    # Secure: Check if the current admin owns this entry (Optional, but good practice)
+    if budget.admin_id != session["user_id"]:
+        flash("Error: You can only edit funds you added.", "error")
+        return redirect(url_for("admin_budget_tracking"))
+
+    try:
+        budget.amount = float(request.form["amount"])
+        budget.description = request.form["description"]
+        db.session.commit()
+        flash("Budget entry updated successfully.", "success")
+    except ValueError:
+        flash("Error: Invalid amount.", "error")
+
+    return redirect(url_for("admin_budget_tracking"))
+
+
+# 2. DELETE BUDGET ROUTE
+@app.route("/admin/budget/delete/<int:budget_id>", methods=["POST"])
+def admin_delete_budget(budget_id):
+    if session.get("role") != "Admin":
+        return redirect(url_for("admin_login"))
+
+    budget = Budget.query.get_or_404(budget_id)
+
+    db.session.delete(budget)
+    db.session.commit()
+
+    flash("Budget entry deleted.", "success")
+    return redirect(url_for("admin_budget_tracking"))
 
 
 # --- System Data Management ---
