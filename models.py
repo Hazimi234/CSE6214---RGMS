@@ -84,6 +84,9 @@ class Proposal(db.Model):
     status = db.Column(db.String(30), nullable=False, default="Submitted")
     submission_date = db.Column(db.Date, default=datetime.utcnow)
     document_file = db.Column(db.String(100), nullable=True)
+    review_score = db.Column(db.Integer, nullable=True)     # Total Score (0-100)
+    review_feedback = db.Column(db.Text, nullable=True)
+    review_draft = db.Column(db.Text, nullable=True)
     
     researcher_id = db.Column(db.Integer, db.ForeignKey('researcher.researcher_id'), nullable=False)
     cycle_id = db.Column(db.Integer, db.ForeignKey('grant_cycle.cycle_id'), nullable=False)
@@ -115,3 +118,26 @@ class Notification(db.Model):
     # Relationships
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='notifications_received')
     sender = db.relationship('User', foreign_keys=[sender_id], backref='notifications_sent')
+
+class Budget(db.Model):
+    __tablename__ = 'budget'
+    budget_id = db.Column(db.Integer, primary_key=True)
+    amount = db.Column(db.Float, nullable=False)   # e.g. +50,000
+    description = db.Column(db.String(255), nullable=False) # e.g. "MMU 2026 Allocation"
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Linked to Admin who added it
+    admin_id = db.Column(db.String(50), db.ForeignKey('user.mmu_id'), nullable=False)
+    admin = db.relationship('User', backref='budgets_added')
+
+class Grant(db.Model):
+    __tablename__ = 'grant'
+    grant_id = db.Column(db.Integer, primary_key=True)
+    grant_amount = db.Column(db.Float, nullable=False) # The actual money given
+    award_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # One Grant belongs to One Proposal
+    proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.proposal_id'), nullable=False)
+    
+    # Relationship to access Proposal details easily
+    proposal = db.relationship('Proposal', backref=db.backref('grant_award', uselist=False))

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Screen Proposal - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-tasks"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('reviewer_dashboard') }}"><i class="fas fa-home"></i>
+                        Dashboard</a></li>
+                <li><a href="{{ url_for('reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li class="active"><a href="{{ url_for('reviewer_view_proposals') }}"><i
+                            class="fas fa-clipboard-list"></i> Assigned Proposal</a></li>
+                <li><a href="{{ url_for('reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review Proposal</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Screening: {{ proposal.title }}</h2>
+                <div style="display: flex; align-items: center; gap: 25px;">
+                    <a href="{{ url_for('view_notifications') }}" style="color: #555; font-size: 1.2rem;"><i
+                            class="fas fa-bell"></i></a>
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                            style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #4caf50;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+
+                <a href="{{ url_for('reviewer_view_proposals') }}"
+                    style="display: inline-flex; align-items: center; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: bold;">
+                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to List
+                </a>
+
+                <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 30px;">
+
+                    <div class="section-card"
+                        style="height: 800px; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+                        <div
+                            style="padding: 15px; border-bottom: 1px solid #eee; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; color: #333;"><i class="fas fa-file-pdf" style="color: #d32f2f;"></i>
+                                Proposal Document</h4>
+                            {% if proposal.document_file %}
+                            <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
+                                target="_blank" style="font-size: 0.9rem; color: #1976d2; text-decoration: none;">Open
+                                in New Tab <i class="fas fa-external-link-alt"></i></a>
+                            {% endif %}
+                        </div>
+
+                        <div style="flex: 1; background: #525659;">
+                            {% if proposal.document_file %}
+                            <embed src="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
+                                type="application/pdf" width="100%" height="100%" />
+                            {% else %}
+                            <div
+                                style="display: flex; align-items: center; justify-content: center; height: 100%; color: #fff;">
+                                <p>No PDF document uploaded.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+                        <div class="section-card">
+                            <h4 style="color: #1b5e20; margin-top: 0;">Proposal Details</h4>
+                            <div style="margin-bottom: 10px;">
+                                <small style="color: #888; font-weight: bold;">RESEARCHER</small>
+                                <div style="font-size: 1rem;">{{ proposal.researcher.user_info.name }}</div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <small style="color: #888; font-weight: bold;">FACULTY</small>
+                                <div style="font-size: 1rem;">{{ proposal.researcher.user_info.faculty }}</div>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <small style="color: #888; font-weight: bold;">BUDGET</small>
+                                <div style="font-size: 1rem; color: #2e7d32; font-weight: bold;">RM {{
+                                    "{:,.2f}".format(proposal.requested_budget) }}</div>
+                            </div>
+                        </div>
+
+                        <div class="section-card" style="border-top: 5px solid #1b5e20;">
+                            <h3 style="margin-top: 0; color: #1b5e20; text-align: center;">Screening Decision</h3>
+                            <p style="text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 20px;">
+                                Please review the document and select an outcome.
+                            </p>
+
+                            <form method="POST" style="display: flex; flex-direction: column; gap: 10px;">
+
+                                <button type="submit" name="decision" value="eligible" class="btn-primary"
+                                    onclick="return confirm('Mark this proposal as Eligible?');">
+                                    <i class="fas fa-check-circle"></i> Eligible
+                                </button>
+
+                                <button type="submit" name="decision" value="not_eligible" class="btn-outline"
+                                    style="border-color: #fbc02d; color: #f57f17;"
+                                    onclick="return confirm('Return to researcher for revision?');">
+                                    <i class="fas fa-exclamation-circle"></i> Not Eligible (Revision)
+                                </button>
+
+                                <button type="submit" name="decision" value="not_interested" class="btn-outline"
+                                    style="border-color: #c62828; color: #c62828;"
+                                    onclick="return confirm('Decline this task? Admin will be notified.');">
+                                    <i class="fas fa-times-circle"></i> Not Interested (Decline)
+                                </button>
+
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
