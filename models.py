@@ -84,6 +84,9 @@ class Proposal(db.Model):
     status = db.Column(db.String(30), nullable=False, default="Submitted")
     submission_date = db.Column(db.Date, default=datetime.utcnow)
     document_file = db.Column(db.String(100), nullable=True)
+    review_score = db.Column(db.Integer, nullable=True)     # Total Score (0-100)
+    review_feedback = db.Column(db.Text, nullable=True)
+    review_draft = db.Column(db.Text, nullable=True)
     
     researcher_id = db.Column(db.Integer, db.ForeignKey('researcher.researcher_id'), nullable=False)
     cycle_id = db.Column(db.Integer, db.ForeignKey('grant_cycle.cycle_id'), nullable=False)

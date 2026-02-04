@@ -1,5 +1,6 @@
 import os
 import secrets
+import json
 from datetime import datetime
 from flask import Flask, redirect, url_for, render_template, request, session, flash
 from flask_migrate import Migrate
@@ -568,42 +569,79 @@ def admin_view_proposal(proposal_id):
 
 @app.route("/admin/proposals/assign/<int:proposal_id>", methods=["GET", "POST"])
 def admin_assign_evaluators(proposal_id):
-    """Assigns Reviewer & HOD and sets their specific deadlines."""
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
+    researcher_faculty = proposal.researcher.user_info.faculty
 
     if request.method == "POST":
-        if request.form.get("reviewer_id"):
-            proposal.assigned_reviewer_id = request.form.get("reviewer_id")
-        if request.form.get("hod_id"):
-            proposal.assigned_hod_id = request.form.get("hod_id")
+        # 1. Assign Reviewer
+        reviewer_id = request.form.get("reviewer_id")
+        if reviewer_id:
+            proposal.assigned_reviewer_id = reviewer_id
 
-        # Set Deadlines
-        for role_type in ["Reviewer", "HOD"]:
-            date_val = request.form.get(f"{role_type.lower()}_deadline")
-            if date_val:
-                dl = Deadline.query.filter_by(
-                    proposal_id=proposal.proposal_id, deadline_type=role_type
-                ).first()
-                if not dl:
-                    dl = Deadline(
-                        proposal_id=proposal.proposal_id, deadline_type=role_type
-                    )
-                dl.due_date = datetime.strptime(date_val, "%Y-%m-%d").date()
-                db.session.add(dl)
+            # --- NEW: NOTIFY REVIEWER ---
+            reviewer_user = Reviewer.query.get(reviewer_id).user_info
+            msg = (
+                f"New Assignment: You have been assigned to screen '{proposal.title}'."
+            )
+            link = url_for("reviewer_view_proposals")
+            send_notification(
+                reviewer_user.mmu_id, msg, link, sender_id=session["user_id"]
+            )
+            # -----------------------------
+
+        # 2. Assign HOD
+        hod_id = request.form.get("hod_id")
+        if hod_id:
+            proposal.assigned_hod_id = hod_id
+
+            # --- NEW: NOTIFY HOD ---
+            hod_user = HOD.query.get(hod_id).user_info
+            msg = (
+                f"New Assignment: You have been assigned to approve '{proposal.title}'."
+            )
+            link = url_for("hod_dashboard")  # Or hod proposal list
+            send_notification(hod_user.mmu_id, msg, link, sender_id=session["user_id"])
+            # -----------------------------
+
+        # 3. Set Deadlines (Keep existing code)
+        rev_date = request.form.get("reviewer_deadline")
+        hod_date = request.form.get("hod_deadline")
+
+        if rev_date:
+            dl = Deadline.query.filter_by(
+                proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+            ).first()
+            if not dl:
+                dl = Deadline(
+                    proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+                )
+            dl.due_date = datetime.strptime(rev_date, "%Y-%m-%d").date()
+            db.session.add(dl)
+
+        if hod_date:
+            dl = Deadline.query.filter_by(
+                proposal_id=proposal.proposal_id, deadline_type="HOD"
+            ).first()
+            if not dl:
+                dl = Deadline(proposal_id=proposal.proposal_id, deadline_type="HOD")
+            dl.due_date = datetime.strptime(hod_date, "%Y-%m-%d").date()
+            db.session.add(dl)
 
         proposal.status = "Under Review"
         db.session.commit()
-        flash("Evaluators assigned and deadlines set.", "success")
+        flash("Evaluators assigned and notified successfully.", "success")
         return redirect(
             url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
         )
 
-    # Fetch eligible evaluators (Same Faculty)
-    faculty = proposal.researcher.user_info.faculty
-    reviewers = Reviewer.query.join(User).filter(User.faculty == faculty).all()
-    hods = HOD.query.join(User).filter(User.faculty == faculty).all()
+    # GET Logic (Keep existing)
+    reviewers = (
+        Reviewer.query.join(User).filter(User.faculty == researcher_faculty).all()
+    )
+    hods = HOD.query.join(User).filter(User.faculty == researcher_faculty).all()
 
     return render_template(
         "admin_assign_evaluators.html",
@@ -953,6 +991,269 @@ def reviewer_profile():
         if update_user_profile(user, request.form, request.files):
             return redirect(url_for("reviewer_profile"))
     return render_template("reviewer_profile.html", user=user)
+
+
+@app.route("/reviewer/proposals")
+def reviewer_view_proposals():
+    if session.get("role") != "Reviewer":
+        return redirect(url_for("reviewer_login"))
+
+    user = User.query.get(session["user_id"])
+    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+    
+    if not reviewer_profile:
+        flash("Error: Reviewer profile not found.", "error")
+        return redirect(url_for("reviewer_dashboard"))
+
+    # Pagination & Search
+    page = request.args.get("page", 1, type=int)
+    search = request.args.get("search", "")
+    per_page = 8
+
+    # --- FIX: Only show proposals that need SCREENING ---
+    query = Proposal.query.filter(
+        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+        Proposal.status.in_(["Submitted", "Under Review"]) # <--- THIS FILTER WAS MISSING
+    )
+
+    if search:
+        query = query.filter(Proposal.title.ilike(f"%{search}%"))
+    if request.args.get("area"):
+        query = query.filter(Proposal.research_area == request.args.get("area"))
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template(
+        "reviewer_proposals.html",
+        proposals=pagination.items,
+        pagination=pagination,
+        user=user,
+        research_areas=ResearchArea.query.all(),
+    )
+
+
+@app.route("/reviewer/screen/<int:proposal_id>", methods=["GET", "POST"])
+def reviewer_screen_proposal(proposal_id):
+    if session.get("role") != "Reviewer":
+        return redirect(url_for("reviewer_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # Security Check
+    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+    if (
+        not reviewer_profile
+        or proposal.assigned_reviewer_id != reviewer_profile.reviewer_id
+    ):
+        flash("Access Denied.", "error")
+        return redirect(url_for("reviewer_dashboard"))
+
+    if request.method == "POST":
+        decision = request.form.get("decision")
+
+        # 1. ELIGIBLE -> Move to Evaluation
+        if decision == "eligible":
+            proposal.status = "Screening Passed"
+            flash("Screening Passed. You may now evaluate the proposal.", "success")
+
+        # 2. NOT ELIGIBLE -> STRICT REJECTION (As requested)
+        elif decision == "not_eligible":
+            proposal.status = "Rejected"  # Final state
+
+            # Notify Researcher
+            msg = f"Update: Your proposal '{proposal.title}' was rejected during screening."
+            link = url_for("researcher_dashboard")
+            send_notification(
+                proposal.researcher.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+            )
+
+            flash("Proposal Rejected. Researcher notified.", "error")
+
+        # 3. NOT INTERESTED -> Decline Task
+        elif decision == "not_interested":
+            proposal.assigned_reviewer_id = None
+            proposal.status = "Submitted"
+
+            # Notify Admin
+            admin = User.query.filter_by(user_role="Admin").first()
+            if admin:
+                msg = (
+                    f"Task Declined: Reviewer {user.name} declined '{proposal.title}'."
+                )
+                link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+                send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
+
+            flash("Task declined.", "info")
+
+        db.session.commit()
+        return redirect(url_for("reviewer_view_proposals"))
+
+    return render_template(
+        "reviewer_screen_proposal.html", proposal=proposal, user=user
+    )
+
+
+@app.route("/reviewer/evaluation_list")
+def reviewer_evaluation_list():
+    if session.get("role") != "Reviewer": return redirect(url_for("reviewer_login"))
+    
+    user = User.query.get(session["user_id"])
+    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+
+    # 1. PENDING EVALUATIONS (Pagination for the main work queue)
+    page = request.args.get('page', 1, type=int)
+    search = request.args.get("search", "")
+
+    query_pending = Proposal.query.filter(
+        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+        Proposal.status == "Screening Passed" 
+    )
+
+    if search:
+        query_pending = query_pending.filter(Proposal.title.ilike(f"%{search}%"))
+
+    pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
+
+    # 2. COMPLETED HISTORY (New Query)
+    # Logic: Assigned to me + Has a Score (means evaluation was submitted)
+    history_proposals = Proposal.query.filter(
+        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+        Proposal.review_score != None
+    ).order_by(Proposal.submission_date.desc()).all()
+
+    return render_template(
+        "reviewer_evaluation_list.html",
+        proposals=pagination.items,
+        pagination=pagination,
+        history=history_proposals, # Pass history to template
+        user=user,
+        research_areas=ResearchArea.query.all()
+    )
+
+
+@app.route("/reviewer/evaluate/<int:proposal_id>", methods=["GET", "POST"])
+def reviewer_evaluate_proposal(proposal_id):
+    if session.get("role") != "Reviewer": return redirect(url_for("reviewer_login"))
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # CHECK STATUS
+    # Case A: Ready for Review (Normal)
+    if proposal.status == "Screening Passed":
+        readonly = False
+    
+    # Case B: Already Reviewed (Read-Only Mode)
+    elif proposal.review_score is not None:
+        readonly = True
+        # If accessing completed review, we strictly view it, no POST allowed unless we want to block it.
+        # But let's just use the readonly flag to hide buttons in template.
+    
+    # Case C: Invalid Access
+    else:
+        flash("Error: This proposal cannot be evaluated at this stage.", "error")
+        return redirect(url_for("reviewer_view_proposals"))
+
+    # LOAD SAVED ANSWERS (From Draft OR Final Score)
+    saved_answers = {}
+    
+    if proposal.review_draft:
+        # Load draft if exists
+        try: saved_answers = json.loads(proposal.review_draft)
+        except: saved_answers = {}
+
+    if request.method == "POST":
+        action = request.form.get("action")  # Check which button was clicked
+
+        # 1. COLLECT FORM DATA
+        data = {}
+        total_score = 0
+        all_answered = True
+
+        for i in range(1, 21):
+            val = request.form.get(f"q{i}")
+            data[f"q{i}"] = val  # Save the specific answer (e.g., "5")
+
+            if val:
+                total_score += int(val)
+            else:
+                all_answered = False  # Found a missing answer
+
+        feedback = request.form.get("feedback")
+        data["feedback"] = feedback
+
+        # ---------------------------------------------------------
+        # ACTION: SAVE DRAFT
+        # ---------------------------------------------------------
+        if action == "save_draft":
+            proposal.review_draft = json.dumps(data)  # Save to DB as text
+            db.session.commit()
+            flash("Draft saved successfully. You can continue later.", "info")
+            return redirect(
+                url_for("reviewer_evaluate_proposal", proposal_id=proposal_id)
+            )
+
+        # ---------------------------------------------------------
+        # ACTION: SUBMIT FINAL EVALUATION
+        # ---------------------------------------------------------
+        elif action == "submit":
+
+            if not all_answered:
+                flash("Error: You must answer all 20 questions to submit.", "error")
+                return redirect(
+                    url_for("reviewer_evaluate_proposal", proposal_id=proposal_id)
+                )
+
+            # Update Proposal Score
+            proposal.review_score = total_score
+            proposal.review_feedback = feedback
+            proposal.review_draft = json.dumps(data)
+
+            # Determine Outcome
+            if total_score >= 80:
+                proposal.status = "Pending HOD Approval"
+                flash(
+                    f"Evaluation Complete. Score: {total_score}/100. Proposal forwarded to HOD.",
+                    "success",
+                )
+
+                # Notify HOD
+                if proposal.assigned_hod_id:
+                    hod = HOD.query.get(proposal.assigned_hod_id)
+                    msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
+                    link = url_for("hod_dashboard")
+                    send_notification(
+                        hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+                    )
+            else:
+                proposal.status = "Rejected"
+                flash(
+                    f"Evaluation Complete. Score: {total_score}/100. Proposal Rejected.",
+                    "error",
+                )
+
+                # Notify Researcher
+                msg = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100)."
+                link = url_for("researcher_dashboard")
+                send_notification(
+                    proposal.researcher.user_info.mmu_id,
+                    msg,
+                    link,
+                    sender_id=user.mmu_id,
+                )
+
+            db.session.commit()
+            return redirect(url_for("reviewer_evaluation_list"))
+
+    # Pass 'saved_answers' to the template
+    return render_template(
+        "reviewer_evaluate_proposal.html",
+        proposal=proposal,
+        user=user,
+        saved_answers=saved_answers,
+        readonly=readonly
+    )
 
 
 # =====================================================================
