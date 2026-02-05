@@ -6,28 +6,135 @@
     <title>Admin Dashboard - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* DASHBOARD CARD STYLES */
+        .dash-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s;
+            border-left: 5px solid transparent;
+            text-decoration: none;
+            /* For links */
+        }
+
+        .dash-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .card-info h3 {
+            margin: 0;
+            font-size: 2.2rem;
+            color: #333;
+        }
+
+        .card-info p {
+            margin: 0;
+            color: #666;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Color Variations */
+        .card-blue {
+            border-left-color: #1976d2;
+        }
+
+        .card-blue .card-icon {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .card-yellow {
+            border-left-color: #fbc02d;
+        }
+
+        .card-yellow .card-icon {
+            background: #fff9c4;
+            color: #fbc02d;
+        }
+
+        .card-orange {
+            border-left-color: #f57c00;
+        }
+
+        .card-orange .card-icon {
+            background: #ffe0b2;
+            color: #f57c00;
+        }
+
+        .card-green {
+            border-left-color: #2e7d32;
+        }
+
+        .card-green .card-icon {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        /* Financial Health Bar */
+        .financial-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            border-top: 4px solid #1b5e20;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 15px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #2e7d32;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 0.8rem;
+            transition: width 0.5s;
+        }
+    </style>
 </head>
 
 <body>
-
     <div class="dashboard-container">
-
         <div class="sidebar">
-            <div class="sidebar-header">
-                <i class="fas fa-user-shield" style="margin-right: 10px; color: var(--secondary-color);"></i>
-                GrantSysMMU
-            </div>
+            <div class="sidebar-header"><i class="fas fa-user-shield"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li class="active"><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i>
-                        Dashboard</a></li>
-                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User
-                        Management</a></li>
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
-                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
-                        Tracking</a></li>
-                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                <li class="active"><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My
+                        Account</a></li>
+                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User Management</a>
                 </li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
+                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -35,10 +142,8 @@
         </div>
 
         <div class="main-content">
-
             <div class="top-bar">
-                <h2>Overview</h2>
-
+                <h2>Dashboard</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
 
                     <a href="{{ url_for('view_notifications') }}"
@@ -69,72 +174,174 @@
             </div>
 
             <div class="content-wrapper">
-                <div class="alert alert-success">
-                    Welcome back, <strong>{{ user.name }}</strong>! Here is your system overview.
+
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color: #1b5e20; margin-bottom: 5px;">Welcome, {{ user.name }}!</h1>
+                    <p style="color: #666; font-size: 1.1rem;">
+                        <span
+                            style="background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+                            <i class="fas fa-user-shield"></i> Role: Admin
+                        </span>
+                    </p>
                 </div>
 
-                <div class="section-card"
-                    style="margin-bottom: 30px; background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); color: white;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0; color: white;">Financial Health</h3>
-                        <i class="fas fa-wallet" style="font-size: 1.5rem; opacity: 0.8;"></i>
+                <div class="financial-card">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <h3 style="margin: 0; color: #1b5e20; font-size: 1.5rem;"><i class="fas fa-chart-pie"></i>
+                                Financial Health</h3>
+                            <p style="margin-top: 5px; color: #666;">
+                                Total Fund Capacity: <strong>RM {{ "{:,.2f}".format(total_fund_capacity) }}</strong>
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span
+                                style="font-size: 2rem; font-weight: bold; color: {% if funds_utilized_percent > 80 %}#c62828{% else %}#2e7d32{% endif %};">
+                                {{ funds_utilized_percent }}%
+                            </span>
+                            <p style="margin: 0; font-size: 0.9rem; color: #666;">Funds Utilized</p>
+                        </div>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem;">
-                        <span>Funds Utilized: {{ stats.budget_percent }}%</span>
-                        <span>Remaining: RM {{ "{:,.2f}".format(stats.remaining) }}</span>
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: {{ funds_utilized_percent }}%;"></div>
                     </div>
-
-                    <div
-                        style="width: 100%; background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; overflow: hidden;">
-                        <div style="width: {{ stats.budget_percent }}%; background: #ffc107; height: 100%;"></div>
-                    </div>
-
-                    <small style="display: block; margin-top: 10px; opacity: 0.8;">
-                        Total Fund Capacity: RM {{ "{:,.2f}".format(stats.total_budget) }}
-                    </small>
                 </div>
 
-                <div class="stats-grid">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 25px;">
 
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.open_cycles }} / {{ stats.total_cycles }}</h3>
-                            <p>Open / Total Grant Cycles</p>
+                    <a href="{{ url_for('admin_proposal_management') }}" style="text-decoration: none;">
+                        <div class="dash-card card-blue">
+                            <div class="card-info">
+                                <h3>{{ open_cycles }} <span style="font-size: 1rem; color: #999;">/ {{ total_cycles
+                                        }}</span></h3>
+                                <p>Active Grant Cycles</p>
+                            </div>
+                            <div class="card-icon">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
                         </div>
-                        <i class="fas fa-layer-group stat-icon" style="color: #1565c0;"></i>
-                    </div>
+                    </a>
 
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.submitted }}</h3>
-                            <p>New Proposals</p>
+                    <a href="{{ url_for('admin_proposal_management') }}" style="text-decoration: none;">
+                        <div class="dash-card card-yellow">
+                            <div class="card-info">
+                                <h3>{{ new_proposals }}</h3>
+                                <p>New Proposals</p>
+                            </div>
+                            <div class="card-icon">
+                                <i class="fas fa-file-import"></i>
+                            </div>
                         </div>
-                        <i class="fas fa-file-import stat-icon" style="color: #ff9800;"></i>
-                    </div>
+                    </a>
 
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.under_review }}</h3>
+                    <div class="dash-card card-orange">
+                        <div class="card-info">
+                            <h3>{{ under_review }}</h3>
                             <p>Under Review</p>
                         </div>
-                        <i class="fas fa-user-clock stat-icon" style="color: #9c27b0;"></i>
+                        <div class="card-icon">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
                     </div>
 
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>{{ stats.approved }}</h3>
+                    <div class="dash-card card-green">
+                        <div class="card-info">
+                            <h3>{{ awarded }}</h3>
                             <p>Grants Awarded</p>
                         </div>
-                        <i class="fas fa-award stat-icon" style="color: #2e7d32;"></i>
+                        <div class="card-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
                     </div>
 
                 </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-top: 30px;">
+
+                    <div
+                        style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0; color: #333; font-size: 1.2rem;"><i class="fas fa-history"></i> Recent
+                                Submissions</h3>
+                            <a href="{{ url_for('admin_proposal_management') }}"
+                                style="font-size: 0.9rem; color: #1b5e20; text-decoration: none;">View All</a>
+                        </div>
+
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tbody>
+                                {% for prop in recent_proposals %}
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 12px 0;">
+                                        <div style="font-weight: bold; color: #444;">{{ prop.title }}</div>
+                                        <div style="font-size: 0.85rem; color: #888;">{{ prop.researcher.user_info.name
+                                            }} • {{ prop.research_area }}</div>
+                                    </td>
+                                    <td style="text-align: right; padding: 12px 0;">
+                                        <span style="font-size: 0.8rem; padding: 3px 8px; border-radius: 10px; font-weight: bold;
+                                            {% if prop.status == 'Submitted' %}background: #e3f2fd; color: #1565c0;
+                                            {% elif prop.status == 'Approved' %}background: #c8e6c9; color: #2e7d32;
+                                            {% else %}background: #fff3e0; color: #ef6c00;{% endif %}">
+                                            {{ prop.status }}
+                                        </span>
+                                        <div style="font-size: 0.8rem; color: #999; margin-top: 3px;">{{
+                                            prop.submission_date.strftime('%d %b') }}</div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td style="padding: 20px; text-align: center; color: #999;">No recent activity.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div
+                        style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                        <h3 style="margin: 0 0 20px 0; color: #c62828; font-size: 1.2rem;"><i
+                                class="fas fa-exclamation-triangle"></i> Closing Soon</h3>
+
+                        {% if closing_soon %}
+                        {% for cycle in closing_soon %}
+                        <div
+                            style="background: #ffebee; border-left: 4px solid #c62828; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                            <div style="font-weight: bold; color: #b71c1c;">{{ cycle.cycle_name }}</div>
+                            <div style="font-size: 0.9rem; color: #555; margin-top: 5px;">
+                                Ends: <strong>{{ cycle.end_date.strftime('%d %b %Y') }}</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #c62828; margin-top: 5px; font-weight: bold;">
+                                <i class="far fa-clock"></i> Deadline approaching
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div style="text-align: center; padding: 30px 0; color: #888;">
+                            <i class="fas fa-check-circle"
+                                style="font-size: 2rem; color: #c8e6c9; margin-bottom: 10px;"></i>
+                            <p>No cycles closing in the next 30 days.</p>
+                        </div>
+                        {% endif %}
+
+                        <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: #333;">System Status</h4>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="color: #666;">Database Status</span>
+                                <span style="color: #2e7d32; font-weight: bold;">Online</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #666;">Last Backup</span>
+                                <span style="color: #555;">Today, 04:00 AM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
         </div>
     </div>
-
 </body>
 
 </html>
