@@ -97,25 +97,6 @@ class Proposal(db.Model):
     hod = db.relationship('HOD', foreign_keys=[assigned_hod_id])
     deadlines = db.relationship('Deadline', backref='proposal', cascade="all, delete-orphan")
 
-# For "Monitor and Validate Progress Reports"
-class ProgressReport(db.Model):
-    __tablename__ = 'progress_report'
-    report_id = db.Column(db.Integer, primary_key=True)
-    proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.proposal_id'), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False) # Project updates
-    financial_usage = db.Column(db.Float, nullable=False) # Money spent so far
-    document_file = db.Column(db.String(100), nullable=True) # PDF attachment
-    status = db.Column(db.String(50), default="Submitted") # "Validated", "Requires Revision"
-    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
-    hod_feedback = db.Column(db.Text, nullable=True)
-    document_file = db.Column(db.String(100), nullable=True)
-    
-
-    
-    proposal = db.relationship('Proposal', backref='reports')
-
-# Based on Data Dictionary 3.2.11
 class Deadline(db.Model):
     __tablename__ = 'deadline'
     deadline_id = db.Column(db.Integer, primary_key=True)
