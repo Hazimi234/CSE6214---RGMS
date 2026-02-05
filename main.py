@@ -950,6 +950,62 @@ def researcher_submit_form(cycle_id):
         research_areas=ResearchArea.query.all(),
     )
 
+@app.route("/researcher/resume/<int:proposal_id>")
+def researcher_resume_proposal(proposal_id):
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    return render_template(
+        "researcher_resume_dvc.html",
+        cycle= proposal.cycle,
+        proposal=proposal,
+        user=user,
+        research_areas=ResearchArea.query.all())
+
+
+
+@app.route("/researcher/proposal_status")
+def researcher_my_proposals():
+    # Access Control: Ensure only Researchers can access this domain
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+    
+    # Data Retrieval: Get the User and link to their specific Researcher ID
+    user = User.query.get(session["user_id"])
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+    
+    if not researcher:
+        flash("Error: Researcher profile not found.", "error")
+        return redirect(url_for("researcher_dashboard"))
+
+    stats={
+        "my_proposals": Proposal.query.filter_by(researcher_id=researcher.researcher_id).count(),
+        "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id==researcher.researcher_id).count(),
+        "pending_reports": 0  # Placeholder for future implementation
+    }
+
+    # Fetch all proposals for this researcher, newest first
+    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
+                              .order_by(Proposal.submission_date.desc()).all()
+    
+    return render_template("researcher_proposal_status.html", proposals=proposals, user=user, stats=stats)
+
+@app.route("/researcher/withdraw/<int:proposal_id>", methods=["POST"])
+def researcher_withdraw_proposal(proposal_id):
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+   
+    # Withdraw the proposal
+    proposal.status = "Withdrawn"
+    db.session.commit()
+
+    flash("Proposal withdrawn successfully.", "success")
+    return redirect(url_for("researcher_proposal_status"))
 
 # =====================================================================
 #                            REVIEWER MODULE
