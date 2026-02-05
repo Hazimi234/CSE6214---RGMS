@@ -142,7 +142,7 @@
 
                 <a href="{{ url_for('reviewer_evaluation_list') }}"
                     style="display: inline-flex; align-items: center; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: bold;">
-                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Evaluation Queue
+                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Review Proposals
                 </a>
 
                 {% if readonly %}
@@ -159,18 +159,61 @@
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
 
-                    <div class="section-card"
-                        style="height: 1200px; padding: 0; overflow: hidden; display: flex; flex-direction: column; position: sticky; top: 20px;">
-                        <div style="padding: 15px; background: #f9f9f9; border-bottom: 1px solid #ddd;">
-                            <h4 style="margin: 0; color: #333;"><i class="fas fa-file-pdf" style="color: #d32f2f;"></i>
-                                Reference Document</h4>
-                        </div>
-                        <div style="flex: 1;">
+                    <div class="section-card" 
+                        style="height: 650px; padding: 0; overflow: hidden; display: flex; flex-direction: column; position: sticky; top: 20px; border: 1px solid #ddd;">
+                        
+                        <div style="padding: 15px; background: #f9f9f9; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; color: #333;">
+                                {% if proposal.document_file and '.docx' in proposal.document_file.lower() %}
+                                    <i class="fas fa-file-word" style="color: #2b579a; margin-right: 8px;"></i> Word Document
+                                {% else %}
+                                    <i class="fas fa-file-pdf" style="color: #d32f2f; margin-right: 8px;"></i> Reference Document
+                                {% endif %}
+                            </h4>
+
                             {% if proposal.document_file %}
-                            <embed src="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
-                                type="application/pdf" width="100%" height="100%" />
+                            <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
+                                target="_blank" style="font-size: 0.9rem; color: #1976d2; text-decoration: none;">
+                                {% if '.docx' in proposal.document_file.lower() %}
+                                    Download File <i class="fas fa-download"></i>
+                                {% else %}
+                                    Open Fullscreen <i class="fas fa-external-link-alt"></i>
+                                {% endif %}
+                            </a>
+                            {% endif %}
+                        </div>
+
+                        <div style="flex: 1; background: #525659; display: flex; align-items: center; justify-content: center;">
+                            {% if proposal.document_file %}
+                                
+                                {% if '.pdf' in proposal.document_file.lower() %}
+                                    <embed src="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
+                                        type="application/pdf" width="100%" height="100%" />
+                                
+                                {% elif '.docx' in proposal.document_file.lower() or '.doc' in proposal.document_file.lower() %}
+                                    <div style="text-align: center; color: #f0f0f0; padding: 20px;">
+                                        <i class="fas fa-file-word" style="font-size: 5rem; margin-bottom: 20px; color: #fff;"></i>
+                                        <h3 style="margin-bottom: 10px;">Preview Not Available</h3>
+                                        <p style="margin-bottom: 25px; color: #ccc;">Browsers cannot embed Word documents directly.</p>
+                                        
+                                        <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}" 
+                                        class="btn-primary" 
+                                        style="background: #fff; color: #333; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+
+                                {% else %}
+                                    <div style="text-align: center; color: #fff;">
+                                        <p>File format not supported for preview.</p>
+                                        <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}" style="color: #fff; text-decoration: underline;">Download File</a>
+                                    </div>
+                                {% endif %}
+
                             {% else %}
-                            <p style="padding: 20px; text-align: center; color: #666;">No document available.</p>
+                                <div style="color: #fff;">
+                                    <p>No document available.</p>
+                                </div>
                             {% endif %}
                         </div>
                     </div>
@@ -613,7 +656,7 @@
                                 <label style="font-weight: bold; font-size: 1.1rem; color: #1b5e20;">Reviewer
                                     Feedback</label>
                                 <textarea name="feedback" rows="5"
-                                    style="width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 5px; margin-top: 8px; font-family: inherit; font-size: 1rem; background-color: {% if readonly %}#fff9c4{% else %}white{% endif %}; color: #333;"
+                                    style="width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 10px; margin-top: 8px; font-family: inherit; font-size: 1rem; background-color: {% if readonly %}#fff9c4{% else %}white{% endif %}; color: #333;"
                                     {% if readonly %}disabled{% endif
                                     %}>{{ saved_answers.get('feedback', '') }}</textarea>
                             </div>

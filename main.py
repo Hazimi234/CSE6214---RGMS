@@ -2,6 +2,7 @@ import os
 import secrets
 import json
 from datetime import datetime
+from datetime import date, timedelta
 from flask import Flask, redirect, url_for, render_template, request, session, flash
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
@@ -50,6 +51,55 @@ db.init_app(app)
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 
+# =====================================================================
+#                       NOTIFICATION HELPER
+# =====================================================================
+def check_deadlines_and_notify(user):
+    """
+    Checks if any assigned proposals are within 3 days of their deadline.
+    Sends a notification if one hasn't been sent already.
+    """
+    if user.user_role == "Reviewer":
+        reviewer = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+        if not reviewer: return
+
+        # Find active proposals (passed screening, not yet reviewed)
+        active_proposals = Proposal.query.filter(
+            Proposal.assigned_reviewer_id == reviewer.reviewer_id,
+            Proposal.status == "Passed Screening",
+            Proposal.review_score == None
+        ).all()
+
+        for prop in active_proposals:
+            # Fetch the Reviewer Deadline for this proposal
+            deadline = Deadline.query.filter_by(
+                proposal_id=prop.proposal_id, 
+                deadline_type="Reviewer"
+            ).first()
+
+            if deadline and deadline.due_date:
+                days_left = (deadline.due_date - date.today()).days
+
+                # Logic: Notify if due in 3 days, 1 day, or Today
+                if 0 <= days_left <= 3:
+                    
+                    # Construct Message
+                    if days_left == 0:
+                        msg = f"URGENT: Review for '{prop.title}' is due TODAY!"
+                    else:
+                        msg = f"Deadline Reminder: Review for '{prop.title}' is due in {days_left} days."
+
+                    # PREVENT SPAM: Check if we already sent this specific message
+                    # (This prevents a new notification every time they refresh the page)
+                    already_notified = Notification.query.filter_by(
+                        recipient_id=user.mmu_id, 
+                        message=msg
+                    ).first()
+
+                    if not already_notified:
+                        link = url_for('reviewer_evaluate_proposal', proposal_id=prop.proposal_id)
+                        # We use 'System' or a generic Admin ID as sender
+                        send_notification(user.mmu_id, msg, link, sender_id="System")
 
 # ========================================================================
 #                            HELPER FUNCTIONS
@@ -1060,13 +1110,40 @@ def reviewer_login():
 def reviewer_dashboard():
     if session.get("role") != "Reviewer":
         return redirect(url_for("reviewer_login"))
+    
+    user = User.query.get(session["user_id"])
+    
+    # --- NEW: RUN DEADLINE CHECK ---
+    # This runs every time they load the dashboard to ensure they see alerts
+    check_deadlines_and_notify(user) 
+    # -------------------------------
+
+    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+
+    stats = {
+        "pending_screenings": 0,
+        "pending_reviews": 0
+    }
+
+    if reviewer_profile:
+        # 1. Count Pending Screenings
+        stats["pending_screenings"] = Proposal.query.filter(
+            Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+            Proposal.status.in_(["Submitted", "Under Review", "Under Screening"])
+        ).count()
+
+        # 2. Count Pending Reviews
+        stats["pending_reviews"] = Proposal.query.filter(
+            Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+            Proposal.status == "Passed Screening",
+            Proposal.review_score == None
+        ).count()
+
     return render_template(
         "reviewer_dashboard.html",
-        stats={"pending_reviews": 5},
-        user=User.query.get(session["user_id"]),
+        stats=stats,
+        user=user,
     )
-
-
 @app.route("/reviewer/profile", methods=["GET", "POST"])
 def reviewer_profile():
     if session.get("role") != "Reviewer":
@@ -1090,30 +1167,29 @@ def reviewer_view_proposals():
         flash("Error: Reviewer profile not found.", "error")
         return redirect(url_for("reviewer_dashboard"))
 
-    # Pagination & Search
-    page = request.args.get("page", 1, type=int)
-    search = request.args.get("search", "")
-    per_page = 8
+    # 1. Fetch ALL proposals assigned to this reviewer (No status filter)
+    # Ordered by newest first
+    all_assigned = Proposal.query.filter_by(
+        assigned_reviewer_id=reviewer_profile.reviewer_id
+    ).order_by(Proposal.submission_date.desc()).all()
 
-    # --- FIX: Only show proposals that need SCREENING ---
-    query = Proposal.query.filter(
-        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-        Proposal.status.in_(["Submitted", "Under Review"]) # <--- THIS FILTER WAS MISSING
-    )
-
-    if search:
-        query = query.filter(Proposal.title.ilike(f"%{search}%"))
-    if request.args.get("area"):
-        query = query.filter(Proposal.research_area == request.args.get("area"))
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    # 2. Separate into "Pending Screening" and "Screening History"
+    # We treat 'Submitted', 'Under Review', and 'Under Screening' as active tasks
+    pending_screening = [
+        p for p in all_assigned 
+        if p.status in ["Submitted", "Under Review", "Under Screening"]
+    ]
+    
+    screening_history = [
+        p for p in all_assigned 
+        if p.status not in ["Submitted", "Under Review", "Under Screening"]
+    ]
 
     return render_template(
         "reviewer_proposals.html",
-        proposals=pagination.items,
-        pagination=pagination,
-        user=user,
-        research_areas=ResearchArea.query.all(),
+        pending_proposals=pending_screening,
+        history_proposals=screening_history,
+        user=user
     )
 
 
@@ -1124,75 +1200,92 @@ def reviewer_screen_proposal(proposal_id):
 
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
+    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
 
     # Security Check
-    reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
-    if (
-        not reviewer_profile
-        or proposal.assigned_reviewer_id != reviewer_profile.reviewer_id
-    ):
+    if not reviewer_profile or proposal.assigned_reviewer_id != reviewer_profile.reviewer_id:
         flash("Access Denied.", "error")
         return redirect(url_for("reviewer_dashboard"))
 
+    # --- READ-ONLY LOGIC ---
+    # Defines which statuses allow screening actions. 
+    # If the status is anything else (e.g., Passed, Failed, Returned), it is Read-Only.
+    active_statuses = ["Submitted", "Under Review", "Under Screening"]
+    readonly = proposal.status not in active_statuses
+
     if request.method == "POST":
+        if readonly:
+            flash("Action not allowed. This proposal has already been screened.", "error")
+            return redirect(url_for("reviewer_view_proposals"))
+
         decision = request.form.get("decision")
-
-        # 1. ELIGIBLE -> Move to Evaluation
+        
+        # --- CASE 1: ELIGIBLE ---
         if decision == "eligible":
-            proposal.status = "Screening Passed"
-            flash("Screening Passed. You may now evaluate the proposal.", "success")
+            proposal.status = "Passed Screening"
+            flash("Proposal Passed Screening. You may now proceed to evaluation.", "success")
 
-        # 2. NOT ELIGIBLE -> STRICT REJECTION (As requested)
+        # --- CASE 2: NOT ELIGIBLE (Resubmission Logic) ---
         elif decision == "not_eligible":
-            proposal.status = "Rejected"  # Final state
+            proposal.status = "Failed Screening"
+            
+            # Ensure 'proposal.cycle' is accessible. 
+            # If cycle is missing, default to closed to prevent errors.
+            if proposal.cycle and proposal.cycle.end_date >= date.today():
+                msg = (f"Screening Update: Your proposal '{proposal.title}' Failed Screening. "
+                       f"The grant cycle is still OPEN. You may edit and resubmit your proposal.")
+                flash("Proposal marked as Failed Screening. Researcher notified to resubmit.", "warning")
+            else:
+                msg = (f"Screening Update: Your proposal '{proposal.title}' Failed Screening. "
+                       f"The grant cycle is CLOSED. Resubmission is no longer possible.")
+                flash("Proposal marked as Failed Screening. Cycle is closed.", "error")
 
-            # Notify Researcher
-            msg = f"Update: Your proposal '{proposal.title}' was rejected during screening."
+            # Notification
             link = url_for("researcher_dashboard")
-            send_notification(
-                proposal.researcher.user_info.mmu_id, msg, link, sender_id=user.mmu_id
-            )
+            if proposal.researcher:
+                send_notification(proposal.researcher.user_info.mmu_id, msg, link, sender_id=user.mmu_id)
 
-            flash("Proposal Rejected. Researcher notified.", "error")
-
-        # 3. NOT INTERESTED -> Decline Task
+        # --- CASE 3: CONFLICT OF INTEREST / DECLINE ---
         elif decision == "not_interested":
-            proposal.assigned_reviewer_id = None
-            proposal.status = "Submitted"
-
+            proposal.status = "Return for Reassignment"
+            
             # Notify Admin
             admin = User.query.filter_by(user_role="Admin").first()
             if admin:
-                msg = (
-                    f"Task Declined: Reviewer {user.name} declined '{proposal.title}'."
-                )
+                msg = f"Return Alert: Reviewer {user.name} declined proposal assignment for '{proposal.title}'."
                 link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
                 send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
-
-            flash("Task declined.", "info")
+            
+            flash("Task declined. Proposal returned to Admin for reassignment.", "info")
 
         db.session.commit()
         return redirect(url_for("reviewer_view_proposals"))
 
     return render_template(
-        "reviewer_screen_proposal.html", proposal=proposal, user=user
+        "reviewer_screen_proposal.html", 
+        proposal=proposal, 
+        user=user,
+        readonly=readonly  # Pass this flag to the template
     )
 
 
 @app.route("/reviewer/evaluation_list")
 def reviewer_evaluation_list():
-    if session.get("role") != "Reviewer": return redirect(url_for("reviewer_login"))
+    if session.get("role") != "Reviewer": 
+        return redirect(url_for("reviewer_login"))
     
     user = User.query.get(session["user_id"])
     reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
 
-    # 1. PENDING EVALUATIONS (Pagination for the main work queue)
+    # 1. PENDING EVALUATIONS
+    # Filter: Assigned to me AND Status is 'Passed Screening' AND No Score yet
     page = request.args.get('page', 1, type=int)
     search = request.args.get("search", "")
 
     query_pending = Proposal.query.filter(
         Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-        Proposal.status == "Screening Passed" 
+        Proposal.status == "Passed Screening",  # <--- FIXED: Matches the screening outcome
+        Proposal.review_score == None           # <--- ADDED: Extra safety to exclude completed reviews
     )
 
     if search:
@@ -1200,8 +1293,8 @@ def reviewer_evaluation_list():
 
     pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
 
-    # 2. COMPLETED HISTORY (New Query)
-    # Logic: Assigned to me + Has a Score (means evaluation was submitted)
+    # 2. COMPLETED HISTORY
+    # Filter: Assigned to me AND Has a Score
     history_proposals = Proposal.query.filter(
         Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
         Proposal.review_score != None
@@ -1211,7 +1304,7 @@ def reviewer_evaluation_list():
         "reviewer_evaluation_list.html",
         proposals=pagination.items,
         pagination=pagination,
-        history=history_proposals, # Pass history to template
+        history=history_proposals,
         user=user,
         research_areas=ResearchArea.query.all()
     )
@@ -1219,37 +1312,43 @@ def reviewer_evaluation_list():
 
 @app.route("/reviewer/evaluate/<int:proposal_id>", methods=["GET", "POST"])
 def reviewer_evaluate_proposal(proposal_id):
-    if session.get("role") != "Reviewer": return redirect(url_for("reviewer_login"))
+    if session.get("role") != "Reviewer": 
+        return redirect(url_for("reviewer_login"))
     
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
 
-    # CHECK STATUS
-    # Case A: Ready for Review (Normal)
-    if proposal.status == "Screening Passed":
+    # --- CHECK STATUS & ACCESS ---
+    
+    # Case A: Ready for Review (Pending)
+    # FIX: Updated string to match "Passed Screening"
+    if proposal.status == "Passed Screening":
         readonly = False
     
-    # Case B: Already Reviewed (Read-Only Mode)
+    # Case B: Already Reviewed (History/Read-Only)
+    # If it has a score, it's done. OR if status moved past screening (e.g. Pending HOD Approval)
     elif proposal.review_score is not None:
         readonly = True
-        # If accessing completed review, we strictly view it, no POST allowed unless we want to block it.
-        # But let's just use the readonly flag to hide buttons in template.
-    
-    # Case C: Invalid Access
+        
+    # Case C: Invalid Access (e.g., trying to evaluate a proposal that failed screening)
     else:
-        flash("Error: This proposal cannot be evaluated at this stage.", "error")
+        flash(f"Error: This proposal cannot be evaluated. Current status: {proposal.status}", "error")
         return redirect(url_for("reviewer_view_proposals"))
 
-    # LOAD SAVED ANSWERS (From Draft OR Final Score)
+    # LOAD SAVED ANSWERS (From Draft)
     saved_answers = {}
-    
     if proposal.review_draft:
-        # Load draft if exists
-        try: saved_answers = json.loads(proposal.review_draft)
-        except: saved_answers = {}
+        try: 
+            saved_answers = json.loads(proposal.review_draft)
+        except: 
+            saved_answers = {}
 
     if request.method == "POST":
-        action = request.form.get("action")  # Check which button was clicked
+        if readonly:
+            flash("This proposal has already been submitted.", "error")
+            return redirect(url_for("reviewer_evaluation_list"))
+
+        action = request.form.get("action")
 
         # 1. COLLECT FORM DATA
         data = {}
@@ -1258,67 +1357,52 @@ def reviewer_evaluate_proposal(proposal_id):
 
         for i in range(1, 21):
             val = request.form.get(f"q{i}")
-            data[f"q{i}"] = val  # Save the specific answer (e.g., "5")
-
+            data[f"q{i}"] = val 
             if val:
                 total_score += int(val)
             else:
-                all_answered = False  # Found a missing answer
+                all_answered = False
 
         feedback = request.form.get("feedback")
         data["feedback"] = feedback
 
-        # ---------------------------------------------------------
         # ACTION: SAVE DRAFT
-        # ---------------------------------------------------------
         if action == "save_draft":
-            proposal.review_draft = json.dumps(data)  # Save to DB as text
+            proposal.review_draft = json.dumps(data)
             db.session.commit()
-            flash("Draft saved successfully. You can continue later.", "info")
-            return redirect(
-                url_for("reviewer_evaluate_proposal", proposal_id=proposal_id)
-            )
+            flash("Draft saved successfully.", "info")
+            return redirect(url_for("reviewer_evaluate_proposal", proposal_id=proposal_id))
 
-        # ---------------------------------------------------------
         # ACTION: SUBMIT FINAL EVALUATION
-        # ---------------------------------------------------------
         elif action == "submit":
-
             if not all_answered:
                 flash("Error: You must answer all 20 questions to submit.", "error")
-                return redirect(
-                    url_for("reviewer_evaluate_proposal", proposal_id=proposal_id)
-                )
+                return redirect(url_for("reviewer_evaluate_proposal", proposal_id=proposal_id))
 
-            # Update Proposal Score
+            # Update Proposal
             proposal.review_score = total_score
             proposal.review_feedback = feedback
-            proposal.review_draft = json.dumps(data)
+            proposal.review_draft = json.dumps(data) # Save final state
 
-            # Determine Outcome
-            if total_score >= 80:
+            # Determine Outcome & Update Status
+            if total_score >= 75:
                 proposal.status = "Pending HOD Approval"
-                flash(
-                    f"Evaluation Complete. Score: {total_score}/100. Proposal forwarded to HOD.",
-                    "success",
-                )
-
-                # Notify HOD
+                flash(f"Review Submitted (Score: {total_score}). Forwarded to HOD.", "success")
+                
+                # --- NOTIFY HOD ---
                 if proposal.assigned_hod_id:
                     hod = HOD.query.get(proposal.assigned_hod_id)
-                    msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
-                    link = url_for("hod_dashboard")
-                    send_notification(
-                        hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
-                    )
+                    if hod:
+                        msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
+                        link = url_for("hod_dashboard")
+                        send_notification(
+                            hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+                        )
             else:
                 proposal.status = "Rejected"
-                flash(
-                    f"Evaluation Complete. Score: {total_score}/100. Proposal Rejected.",
-                    "error",
-                )
-
-                # Notify Researcher
+                flash(f"Review Submitted (Score: {total_score}). Proposal Rejected.", "warning")
+                
+                # --- NOTIFY RESEARCHER ---
                 msg = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100)."
                 link = url_for("researcher_dashboard")
                 send_notification(
@@ -1331,7 +1415,6 @@ def reviewer_evaluate_proposal(proposal_id):
             db.session.commit()
             return redirect(url_for("reviewer_evaluation_list"))
 
-    # Pass 'saved_answers' to the template
     return render_template(
         "reviewer_evaluate_proposal.html",
         proposal=proposal,
@@ -1339,7 +1422,6 @@ def reviewer_evaluate_proposal(proposal_id):
         saved_answers=saved_answers,
         readonly=readonly
     )
-
 
 # =====================================================================
 #                            HOD MODULE
