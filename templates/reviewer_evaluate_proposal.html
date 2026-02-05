@@ -142,7 +142,7 @@
 
                 <a href="{{ url_for('reviewer_evaluation_list') }}"
                     style="display: inline-flex; align-items: center; margin-bottom: 20px; color: #666; text-decoration: none; font-weight: bold;">
-                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Evaluation Queue
+                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Review Proposals
                 </a>
 
                 {% if readonly %}
@@ -613,7 +613,7 @@
                                 <label style="font-weight: bold; font-size: 1.1rem; color: #1b5e20;">Reviewer
                                     Feedback</label>
                                 <textarea name="feedback" rows="5"
-                                    style="width: 100%; padding: 15px; border: 1px solid #ccc; border-radius: 5px; margin-top: 8px; font-family: inherit; font-size: 1rem; background-color: {% if readonly %}#fff9c4{% else %}white{% endif %}; color: #333;"
+                                    style="width: 100%; padding: 9px; border: 1px solid #ccc; border-radius: 10px; margin-top: 8px; font-family: inherit; font-size: 1rem; background-color: {% if readonly %}#fff9c4{% else %}white{% endif %}; color: #333;"
                                     {% if readonly %}disabled{% endif
                                     %}>{{ saved_answers.get('feedback', '') }}</textarea>
                             </div>
