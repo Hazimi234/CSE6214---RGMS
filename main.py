@@ -1429,6 +1429,7 @@ def hod_update_grant():
     
     proposal = Proposal.query.get_or_404(proposal_id)
     grant = Grant.query.filter_by(proposal_id=proposal.proposal_id).first()
+    user = User.query.get(session["user_id"])
 
     if not grant:
         flash("Error: Grant record not found.", "error")
@@ -1443,6 +1444,26 @@ def hod_update_grant():
     flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
     send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been APPROVED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
     return redirect(url_for("hod_grant_allocation"))
+
+@app.route("/hod/grant_budget")
+def hod_grant_budget():
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+    
+    user = User.query.get(session["user_id"])
+
+    # Calculate Budget Info (Global System Stats)
+    total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
+    total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
+    remaining_balance = total_budget_in - total_grants_out
+
+    return render_template(
+        "hod_grant_budget.html",
+        user=user,
+        total_fund=total_budget_in,
+        total_allocated=total_grants_out,
+        current_balance=remaining_balance
+    )
 
 # ==================================================================
 #                          MAIN EXECUTION
