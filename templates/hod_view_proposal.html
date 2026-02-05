@@ -11,7 +11,7 @@
 <body>
     <div class="dashboard-container">
         <div class="sidebar">
-            <div class="sidebar-header"><i class="fas fa-user-shield"
+            <div class="sidebar-header"><i class="fas fa-building"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
@@ -20,7 +20,7 @@
                         Assigned Proposals</a></li>
                 <li><a href="{{ url_for('hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
                 <li><a href="{{ url_for('hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
-                <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
+                <li><a href="{{ url_for('hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>

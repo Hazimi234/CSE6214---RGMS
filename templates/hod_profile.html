@@ -19,9 +19,9 @@
                         Account</a></li>
                 <li><a href="{{ url_for('hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i> Assigned
                         Proposals</a></li>
-                <li><a href="#"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
+                <li><a href="{{ url_for('hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
                 <li><a href="{{ url_for('hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
-                <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
+                <li><a href="{{ url_for('hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>

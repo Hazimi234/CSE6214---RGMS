@@ -108,6 +108,9 @@ class ProgressReport(db.Model):
     document_file = db.Column(db.String(100), nullable=True) # PDF attachment
     status = db.Column(db.String(50), default="Submitted") # "Validated", "Requires Revision"
     submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    hod_feedback = db.Column(db.Text, nullable=True)
+    title = db.Column(db.Text(200), nullable=False)
+
     
     proposal = db.relationship('Proposal', backref='reports')
 
