@@ -2,7 +2,7 @@ import os
 import secrets
 import json
 from datetime import datetime
-from datetime import date, timedelta 
+from datetime import date, timedelta
 from flask import Flask, redirect, url_for, render_template, request, session, flash
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
@@ -1167,7 +1167,7 @@ def reviewer_screen_proposal(proposal_id):
             # Notify Admin
             admin = User.query.filter_by(user_role="Admin").first()
             if admin:
-                msg = f"COI Alert: Reviewer {user.name} declined task/reported COI for '{proposal.title}'."
+                msg = f"Return Alert: Reviewer {user.name} declined proposal assignment for '{proposal.title}'."
                 link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
                 send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
             
