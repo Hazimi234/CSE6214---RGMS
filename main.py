@@ -992,7 +992,7 @@ def researcher_my_proposals():
     proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
                               .order_by(Proposal.submission_date.desc()).all()
     
-    return render_template("researcher_proposal_status.html", proposals=proposals, user=user, stats=stats)
+    return render_template("researcher_my_proposals.html", proposals=proposals, user=user, stats=stats)
 
 @app.route("/researcher/withdraw/<int:proposal_id>", methods=["POST"])
 def researcher_withdraw_proposal(proposal_id):
@@ -1006,7 +1006,35 @@ def researcher_withdraw_proposal(proposal_id):
     db.session.commit()
 
     flash("Proposal withdrawn successfully.", "success")
-    return redirect(url_for("researcher_proposal_status"))
+    return redirect(url_for("researcher_my_proposals"))
+
+@app.route("/researcher/update_progress/<int:proposal_id>", methods=["GET","POST"])
+def researcher_update_progress(proposal_id):
+    proposal=Proposal.query.get_or_404(proposal_id)
+    user=User.query.get(session["user_id"])
+    if request.method=="POST":
+        file=request.files.get("report_file")
+        report_title=request.form["report_title"]
+        financial_usage=request.form.get("financial_usage")
+        content=request.form.get("description")
+        if file and allowed_file(file.filename):
+            filename=save_document(file)
+            new_report=ProgressReport(
+                proposal_id=proposal.proposal_id,
+                title=report_title,
+                document_file=filename,
+                content=content,
+                financial_usage=float(financial_usage) if financial_usage else 0.0,
+                submission_date=datetime.now()
+            )
+            db.session.add(new_report)
+            db.session.commit()
+            flash("Progress report submitted successfully.","success")
+            return redirect(url_for("researcher_my_proposals"))
+        else:
+            flash("Error: Valid report file required.","error")
+    return render_template("researcher_update_progress.html",proposal=proposal,user=user)
+
 
 # =====================================================================
 #                            REVIEWER MODULE

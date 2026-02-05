@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Researcher Dashboard - GrantSysMMU</title>
+    <title>Update Progress - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -12,48 +12,79 @@
     <div class="dashboard-container">
         <div class="sidebar">
             <div class="sidebar-header"><i class="fas fa-microscope"
-                    style="margin-right: 10px; color: var(--secondary-color);">
-
-                </i> GrantSysMMU</div>
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('researcher_dashboard') }}"><i class="fas fa-home"></i>
-                        Dashboard</a></li>
-                <li><a href="{{ url_for('researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal
-                        Submission</a></li>
-                <li class="active"><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
-                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <li><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-arrow-left"></i> Back to Status</a>
                 </li>
             </ul>
         </div>
 
-    <div class="main-content">
-        <div class="top-bar">
-            <h2>Update Progress</h2>
-            <div style="display: flex; align-items: center; gap: 25px;">
-                <a href="{{ url_for('view_notifications') }}"
-                    style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
-                    <i class="fas fa-bell"></i>
-                    {% if unread_notifications > 0 %}
-                    <span
-                        style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {{ unread_notifications }}
-                    </span>
-                    {% endif %}
-                </a>
-                <div style="width: 1px; height: 30px; background: #ddd;"></div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="text-align: right; line-height: 1.3;">
-                        <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
-                        <small style="color: #666;">Researcher</small>
-                    </div>
-                    <a href="{{ url_for('researcher_profile') }}">
-                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
-                            alt="Profile"
-                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
-                    </a>
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Progress Report Submission</h2> <span>{{ user.name }}</span>
+            </div>
+            <div class="content-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
+                    message }}</div>{% endfor %}{% endif %}
+                {% endwith %}
+
+                <div class="login-card" style="max-width: 800px; margin: 0 auto; text-align: left;">
+                    <h3 style="color: #2e7d32;"><i class="fas fa-tasks"></i> Project: {{ proposal.title }}</h3>
+                    <p><strong>Grant Cycle:</strong> {{ proposal.cycle.cycle_name }} | <strong>Status:</strong> Approved
+                    </p>
+                    <hr>
+
+                    <form method="POST" enctype="multipart/form-data">
+
+                        <div class="form-group">
+                            <label>Report Title</label>
+                            <input type="text" name="report_title" placeholder="e.g., First Quarter Progress Report"
+                                required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Progress Summary / Description</label>
+                            <textarea name="description" placeholder="Provide a brief summary of the progress made..." 
+                                style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; min-height: 120px;"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Financial Usage to Date (RM)</label>
+                            <div class="input-icon-wrapper" style="position: relative;">
+                                <i class="fas fa-wallet" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4caf50;"></i>
+                                <input type="number" name="financial_usage" placeholder="e.g. 1500.00" step="0.01" 
+                                       style="width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa;" required>
+                            </div>
+                            <small style="color: #666;">Total amount spent from the allocated budget so far.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Supporting Document (PDF/DOCX)</label>
+                            <div
+                                style="border: 2px dashed #4caf50; padding: 20px; text-align: center; border-radius: 10px; background: #f1f8e9;">
+                                <i class="fas fa-file-upload"
+                                    style="font-size: 2rem; color: #2e7d32; margin-bottom: 10px;"></i>
+                                <p style="margin: 0; font-size: 0.9rem; color: #555;">Upload your detailed progress report file
+                                </p>
+                                <input type="file" name="report_file" required style="margin-top: 10px;">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="margin-top: 20px; background-color: #2e7d32;">
+                            <i class="fas fa-check-circle"></i> Submit Progress Report
+                        </button>
+
+                        <a href="{{ url_for('researcher_my_proposals') }}" class="btn-secondary" style="margin-top: 20px; margin-left: 10px; text-decoration: none; display: inline-block; padding: 12px 20px; text-align: center;">
+                            Cancel
+                        </a>
+
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+</body>
+
+</html>
