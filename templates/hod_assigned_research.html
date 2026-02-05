@@ -131,9 +131,9 @@
                                     </span>
                                 </td>
                                 <td style="padding: 15px;">
-                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                    <div style="display: flex; align-items: center; gap: 5px; justify-content: flex-end;">
                                         <a href="{{ url_for('hod_view_progress_reports', proposal_id=p.proposal_id) }}"
-                                            class="btn-outline" style="padding: 5px 10px; font-size: 0.8rem;">
+                                            class="btn-outline" style="padding: 5px 15px; font-size: 0.8rem;">
                                             <i class="fas fa-eye"></i> View
                                         </a>
                                         <button class="btn-outline btn-manage" onclick="openActionModal('{{ p.proposal_id }}', '{{ p.title }}')" style="padding: 5px 10px; font-size: 0.8rem; cursor: pointer;">
