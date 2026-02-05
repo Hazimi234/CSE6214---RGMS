@@ -1334,11 +1334,64 @@ def hod_view_proposal(proposal_id):
         return redirect(url_for("hod_login"))
     proposal = Proposal.query.get_or_404(proposal_id)
 
+    # Fetch existing deadlines for display
+    deadlines = {
+        "Reviewer": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="Reviewer"
+        ).first(),
+        "HOD": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="HOD"
+        ).first(),
+        "Final": Deadline.query.filter_by(
+            proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+        ).first(),
+    }
+
     return render_template(
         "hod_view_proposal.html",
         proposal=proposal,
         user=User.query.get(session["user_id"]),
+        reviewer_deadline=deadlines["Reviewer"],
+        hod_deadline=deadlines["HOD"],
+        final_deadline=deadlines["Final"],
     )
+
+@app.route("/hod/proposals/decision/<int:proposal_id>", methods=["POST"])
+def hod_proposal_decision(proposal_id):
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # Security: Ensure HOD is assigned
+    current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+    if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
+        flash("Error: You are not authorized to make decisions on this proposal.", "error")
+        return redirect(url_for("hod_assigned_proposals"))
+
+    decision = request.form.get("decision")
+
+    if decision == "approve":
+        proposal.status = "Approved"
+        
+        # Create Grant Record (Award Funding)
+        if not Grant.query.filter_by(proposal_id=proposal.proposal_id).first():
+            new_grant = Grant(
+                grant_amount=proposal.requested_budget,
+                proposal_id=proposal.proposal_id
+            )
+            db.session.add(new_grant)
+        
+        flash(f"Proposal '{proposal.title}' Approved! You may allocate the grant amount now to finish the approval process.", "success")
+
+    elif decision == "reject":
+        proposal.status = "Rejected"
+        flash(f"Proposal '{proposal.title}' Rejected.", "error")
+        send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been REJECTED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+
+    db.session.commit()
+    return redirect(url_for("hod_view_proposal", proposal_id=proposal.proposal_id))
 
 # ==================================================================
 #                          MAIN EXECUTION
