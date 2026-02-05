@@ -18,9 +18,9 @@
                 <li><a href="{{ url_for('hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li class="active"><a href="{{ url_for('hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i>
                         Assigned Proposals</a></li>
-                <li><a href="#"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
+                <li><a href="{{ url_for('hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
                 <li><a href="#"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
-                <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Budget</a></li>
+                <li><a href="#"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -137,24 +137,19 @@
 
                             <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
                                 {% if proposal.status == 'Pending HOD Approval' %}
-                                <form action="{{ url_for('hod_proposal_decision', proposal_id=proposal.proposal_id) }}" method="POST" style="width: 100%; display: flex; flex-direction: column; gap: 15px; align-items: center;">
-                                    <button type="submit" name="decision" value="approve" class="btn-primary" 
                                 <form id="decisionForm" action="{{ url_for('hod_proposal_decision', proposal_id=proposal.proposal_id) }}" method="POST" style="width: 100%; display: flex; flex-direction: column; gap: 15px; align-items: center;">
                                     <input type="hidden" name="decision" id="decisionInput">
                                     
                                     <button type="button" class="btn-primary" 
                                         style="text-decoration: none; padding: 12px; width: 250px; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem;"
-                                        onclick="return confirm('Are you sure you want to APPROVE this proposal?');">
                                         onclick="openModal('approveModal')">
                                         <i class="fas fa-check-circle"></i> Approve Proposal
                                     </button>
 
-                                    <button type="submit" name="decision" value="reject" class="btn-primary" 
                                     <button type="button" class="btn-primary" 
                                         style="text-decoration: none; padding: 12px; width: 250px; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem; background-color: #c62828;"
                                         onmouseover="this.style.backgroundColor='#b71c1c'" 
                                         onmouseout="this.style.backgroundColor='#c62828'"
-                                        onclick="return confirm('Are you sure you want to REJECT this proposal? This action cannot be undone.');">
                                         onclick="openModal('rejectModal')">
                                         <i class="fas fa-times-circle"></i> Reject Proposal
                                     </button>
@@ -229,7 +224,7 @@
         <div class="modal-content">
             <div style="font-size: 3rem; color: #2e7d32; margin-bottom: 15px;"><i class="fas fa-check-circle"></i></div>
             <h3 style="color: #1b5e20; margin-top: 0;">Confirm Approval</h3>
-            <p style="color: #555;">Are you sure you want to <strong>APPROVE</strong> this proposal?<br>This will award the grant funds immediately.</p>
+            <p style="color: #555;">Are you sure you want to <strong>APPROVE</strong> this proposal?<br></p>
             <div class="modal-actions">
                 <button type="button" class="btn-outline" onclick="closeModal('approveModal')" style="width: auto; padding: 10px 20px;">Cancel</button>
                 <button type="button" class="btn-primary" onclick="submitDecision('approve')" style="width: auto; padding: 10px 20px; margin: 0;">Yes, Approve</button>

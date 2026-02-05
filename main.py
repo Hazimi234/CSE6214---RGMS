@@ -1373,7 +1373,7 @@ def hod_proposal_decision(proposal_id):
     decision = request.form.get("decision")
 
     if decision == "approve":
-        proposal.status = "Approved"
+        proposal.status = "Pending Grant"
         
         # Create Grant Record (Award Funding)
         if not Grant.query.filter_by(proposal_id=proposal.proposal_id).first():
@@ -1392,6 +1392,57 @@ def hod_proposal_decision(proposal_id):
 
     db.session.commit()
     return redirect(url_for("hod_view_proposal", proposal_id=proposal.proposal_id))
+
+@app.route("/hod/grant_allocation")
+def hod_grant_allocation():
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+    
+    user = User.query.get(session["user_id"])
+    current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+
+    # Fetch proposals: Pending Grant or Approved, assigned to this HOD
+    proposals = Proposal.query.filter(
+        Proposal.assigned_hod_id == current_hod.hod_id,
+        Proposal.status.in_(["Pending Grant", "Approved"])
+    ).all()
+
+    # Calculate Budget Info
+    total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
+    total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
+    remaining_balance = total_budget_in - total_grants_out
+
+    return render_template(
+        "hod_grant_allocation.html",
+        proposals=proposals,
+        user=user,
+        remaining_balance=remaining_balance
+    )
+
+@app.route("/hod/grant_allocation/update", methods=["POST"])
+def hod_update_grant():
+    if session.get("role") != "HOD":
+        return redirect(url_for("hod_login"))
+
+    proposal_id = request.form.get("proposal_id")
+    new_amount = float(request.form.get("amount"))
+    
+    proposal = Proposal.query.get_or_404(proposal_id)
+    grant = Grant.query.filter_by(proposal_id=proposal.proposal_id).first()
+
+    if not grant:
+        flash("Error: Grant record not found.", "error")
+        return redirect(url_for("hod_grant_allocation"))
+
+    # Update
+    grant.grant_amount = new_amount
+    if proposal.status == "Pending Grant":
+        proposal.status = "Approved"
+
+    db.session.commit()
+    flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
+    send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been APPROVED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+    return redirect(url_for("hod_grant_allocation"))
 
 # ==================================================================
 #                          MAIN EXECUTION
