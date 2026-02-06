@@ -90,6 +90,7 @@ body {
     background-color: var(--bg-light);
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 /* --- Top Bar (Header) --- */
@@ -110,6 +111,19 @@ body {
 
 .content-wrapper {
     padding: 30px;
+}
+
+.content-wrapper-prop{
+    flex: 1;
+    display: flex;
+    justify-content: center;   /* horizontal center */
+    align-items: flex-start;   /* keep near top */
+    padding: 20px;
+}
+
+.card{
+    width: 95%;
+    max-width: 1100px;
 }
 
 /* ==========================================================================
