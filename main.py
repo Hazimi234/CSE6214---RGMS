@@ -1026,7 +1026,7 @@ def researcher_my_proposals():
     
     # Data Retrieval: Get the User and link to their specific Researcher ID
     user = User.query.get(session["user_id"])
-    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).order_by(Researcher.researcher_id.desc()).first()
     
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
@@ -1050,10 +1050,18 @@ def researcher_withdraw_proposal(proposal_id):
         return redirect(url_for("researcher_login"))
     
     proposal = Proposal.query.get_or_404(proposal_id)
+    user=User.query.get(session["user_id"])
    
     # Withdraw the proposal
     proposal.status = "Withdrawn"
     db.session.commit()
+
+    # Notify Admin
+    admin = User.query.filter_by(user_role="Admin").first()
+    if admin:
+        msg = f"Proposal Withdrawn: '{proposal.title}' by {user.name}."
+        link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+        send_notification(recipient_id=admin.mmu_id, message=msg, link=link, sender_id=user.mmu_id) #send notification to admin 
 
     flash("Proposal withdrawn successfully.", "success")
     return redirect(url_for("researcher_my_proposals"))
