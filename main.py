@@ -902,11 +902,23 @@ def researcher_login():
 def researcher_dashboard():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    stats = {"my_proposals": 3, "active_grants": 1, "pending_reports": 2}
+    user= User.query.get(session["user_id"])
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+    approved_count = Proposal.query.filter_by(researcher_id=researcher.researcher_id, status="Approved").count()
+    stats = {"my_proposals": Proposal.query.filter_by(researcher_id=researcher.researcher_id).count(),
+            "approved": approved_count,
+            "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id == researcher.researcher_id).count(),
+            "unread_notifs": Notification.query.filter_by(recipient_id=user.mmu_id, is_read=False).count()}
+    
+    recent_proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
+                                     .order_by(Proposal.submission_date.desc()).limit(3).all()
+
     return render_template(
         "researcher_dashboard.html",
         stats=stats,
-        user=User.query.get(session["user_id"]),
+        user=user,
+        researcher=researcher,
+        recent_proposals=recent_proposals
     )
 
 

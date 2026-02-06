@@ -109,22 +109,46 @@ body {
     z-index: 50;
 }
 
-.content-wrapper {
-    padding: 30px;
+/* Remove browser default spacing */
+body {
+    margin: 0;
 }
 
-.content-wrapper-prop{
+/* Make main layout stretch full screen */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* Sidebar fixed width */
+.sidebar {
+    width: 260px;
+    flex-shrink: 0;
+}
+
+/* Main content fills remaining space */
+.main-content {
     flex: 1;
     display: flex;
-    justify-content: center;   /* horizontal center */
-    align-items: flex-start;   /* keep near top */
-    padding: 20px;
+    flex-direction: column;
+    width: 100%;
 }
 
-.card{
-    width: 95%;
-    max-width: 1100px;
+/* Let proposal section expand fully */
+.content-wrapper-prop {
+    width: 100%;
+    padding: 20px 30px;
+    box-sizing: border-box;
 }
+
+/* Make card stretch instead of centered */
+.proposal-card {
+    width: 100%;
+    max-width: none;
+}
+
+
 
 /* ==========================================================================
                                      COMPONENTS
