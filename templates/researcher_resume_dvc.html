@@ -38,7 +38,7 @@
                 <small>Current File: {{ proposal.document_file }}</small>
             </div>
 
-            <form action="{{ url_for('researcher_submit_form', cycle_id=proposal.cycle_id) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="proposal_id" value="{{ proposal.proposal_id }}">
 
                 <div style="margin-bottom: 15px;">

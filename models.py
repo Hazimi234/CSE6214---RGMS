@@ -2,8 +2,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime
 
+
 db = SQLAlchemy()
 bcrypt = Bcrypt()
+
 
 # --- USER TABLE ---
 class User(db.Model):
@@ -81,7 +83,7 @@ class Proposal(db.Model):
     title = db.Column(db.String(255), nullable=False)
     research_area = db.Column(db.String(100), nullable=False, default="General")
     requested_budget = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(30), nullable=False, default="Submitted")
+    status = db.Column(db.String(30), nullable=False, default="Draft") # "Draft", "Submitted", "Under Review", "Approved", "Rejected"
     submission_date = db.Column(db.Date, default=datetime.utcnow)
     document_file = db.Column(db.String(100), nullable=True)
     review_score = db.Column(db.Integer, nullable=True)     # Total Score (0-100)
@@ -96,6 +98,20 @@ class Proposal(db.Model):
     reviewer = db.relationship('Reviewer', foreign_keys=[assigned_reviewer_id])
     hod = db.relationship('HOD', foreign_keys=[assigned_hod_id])
     deadlines = db.relationship('Deadline', backref='proposal', cascade="all, delete-orphan")
+
+# Proposal Version (DVC)
+class ProposalVersion(db.Model):
+    __tablename__ = 'proposal_version'
+    version_id = db.Column(db.Integer, primary_key=True)
+    proposal_id = db.Column(db.Integer, db.ForeignKey('proposal.proposal_id'), nullable=False)
+    version_number = db.Column(db.Integer, nullable=False)
+    document_file = db.Column(db.String(100), nullable=False)
+    title_snapshot = db.Column(db.String(255), nullable=False)  # Snapshot of title at this version
+    research_area_snapshot = db.Column(db.String(100), nullable=False)  # Snapshot of research area at this version
+    budget_snapshot = db.Column(db.Float, nullable=False)  # Snapshot of requested budget at this version
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    version_note = db.Column(db.String(255), nullable=True)  # e.g. "Initial submission", "Revised after review"
+    proposal = db.relationship('Proposal', backref=db.backref('versions', lazy=True, cascade="all, delete-orphan"))
 
 # For "Monitor and Validate Progress Reports"
 class ProgressReport(db.Model):

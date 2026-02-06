@@ -81,64 +81,61 @@
                             <td style="padding: 12px;">
                                 <span class="status-badge" 
                                 style="
-                                    padding: 5px 5px; 
+                                    padding: 5px 10px; 
                                     border-radius: 20px; 
                                     font-size: 0.8rem; 
                                     font-weight: bold;
                                     {% if proposal.status == 'Approved' %} background: #e8f5e9; color: #2e7d32;
                                     {% elif proposal.status == 'Rejected' %} background: #ffebee; color: #c62828;
                                     {% elif proposal.status == 'Under Review' %} background: #fff3e0; color: #ef6c00;
-                                    {% elif proposal.status == 'Draft' %} background: #fff3e0; color: #ef6c00; /*gotta change the color */
+                                    {% elif proposal.status == 'Draft' %} background: #e3f2fd; color: #1565c0;
                                     {% else %} background: #f5f5f5; color: #616161; {% endif %}
                                 ">
                                     {{ proposal.status }}
                                 </span>
                             </td>
-                            <td style="padding: 12px; text-align: center;">
+
+                            <td style="padding: 12px; display: flex; justify-content: center; align-items: center; gap: 15px;">
                             
                             {% if proposal.status == 'Approved' %}
                                 <a href="{{ url_for('researcher_update_progress', proposal_id=proposal.proposal_id) }}" 
-                                   style="color: #2e7d32; text-decoration: none; margin-right: 12px;" title="Progress Reports">
+                                   style="color: #2e7d32; text-decoration: none;" title="Progress Reports">
                                     <i class="fas fa-tasks"></i>
                                 </a>
-                                <a href="{{url_for('view_notifications')}}" style="color: #1976d2; text-decoration: none;" title="View Details/See Notifications">
-                                        <i class="fas fa-eye"></i>
-                                </a>
-                            
+                                
                             
                             {% elif proposal.status == 'Submitted' %}
-                                <a href="#" style="color: #1b5e20; text-decoration: none; margin-right: 12px;" title="Edit Proposal">
-                                    <i class="fas fa-edit"></i>
-                                </a>
                                 <form action="{{ url_for('researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}" 
-                                      method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
-                                    <button type="submit" style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0;">
+                                      method="POST" style="display: flex; align-items: center;" 
+                                      onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
+                                    <button type="submit" style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
                                         <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </form>
                             
-                            
                             {% elif proposal.status == 'Draft' %}
-                                <a href="{{url_for('researcher_resume_dvc', proposal_id=proposal.proposal_id)}}" style="color: #ef6c00; text-decoration: none; font-weight: bold;" title="Resume Draft">
-                                    <i class="fas fa-play-circle"></i> Resume
+                                <a href="{{ url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" 
+                                    style="color: #1565c0; text-decoration: none; font-size: 0.9rem; font-weight: bold;" title="Resume Draft">
+                                    <i class="fas fa-edit"></i> 
                                 </a>
-
-                            {# 4. REJECTED: View Details Only #}
-                            {% elif proposal.status == 'Rejected'%}
-                                <a href="{{url_for('view_notifications')}}" style="color: #1976d2; text-decoration: none;" title="View Details/See Notifications">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-
-                            {%else%}
+                                <form action="{{ url_for('researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}" 
+                                      method="POST" style="display: flex; align-items: center;" 
+                                      onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
+                                    <button type="submit" style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            
+                            {% else %}
                                 <span style="color: #999; font-weight: bolder;">—</span>
                             {% endif %}
                             </td>
                         </tr>
-                        {% else %}
+                    {% else %}
                         <tr>
                             <td colspan="5" style="padding: 30px; text-align: center; color: #999;">
-                                <i class="fas fa-folder-open" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
-                                No proposals submitted yet.
+            <i class="fas fa-folder-open" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+            No proposals submitted yet.
                             </td>
                         </tr>
                     {% endfor %}
