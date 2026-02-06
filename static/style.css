@@ -109,6 +109,8 @@ body {
     z-index: 50;
 }
 
+
+
 /* Remove browser default spacing */
 body {
     margin: 0;
@@ -148,7 +150,9 @@ body {
     max-width: none;
 }
 
-
+.content-wrapper {
+    padding: 30px;
+}
 
 /* ==========================================================================
                                      COMPONENTS
