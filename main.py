@@ -1303,11 +1303,15 @@ def reviewer_screen_proposal(proposal_id):
             return redirect(url_for("reviewer_view_proposals"))
 
         decision = request.form.get("decision")
-        
+        user = User.query.get(session["user_id"])
         # --- CASE 1: ELIGIBLE ---
         if decision == "eligible":
             proposal.status = "Passed Screening"
             flash("Proposal Passed Screening. You may now proceed to evaluation.", "success")
+            user_message_passed_screening = (f"Screening Update: Your proposal '{proposal.title}' has Passed Screening. "
+                                             f"It is now ready for detailed evaluation.")
+            link_passed_screening = url_for("researcher_my_proposals", cycle_id=proposal.cycle.cycle_id, proposal_id=proposal.proposal_id)
+            send_notification(proposal.researcher.user_info.mmu_id, user_message_passed_screening, link_passed_screening, sender_id=user.mmu_id)
 
         # --- CASE 2: NOT ELIGIBLE (Resubmission Logic) ---
         elif decision == "not_eligible":
@@ -1319,10 +1323,16 @@ def reviewer_screen_proposal(proposal_id):
                 msg = (f"Screening Update: Your proposal '{proposal.title}' Failed Screening. "
                        f"The grant cycle is still OPEN. You may edit and resubmit your proposal.")
                 flash("Proposal marked as Failed Screening. Researcher notified to resubmit.", "warning")
+                user_message_failed_screening = msg + " Please make the necessary revisions and resubmit before the cycle closes."
+                link_failed_screening = url_for("researcher_my_proposals", cycle_id=proposal.cycle.cycle_id, proposal_id=proposal.proposal_id)
+                send_notification(proposal.researcher.user_info.mmu_id, user_message_failed_screening, link_failed_screening, sender_id=user.mmu_id)
             else:
                 msg = (f"Screening Update: Your proposal '{proposal.title}' Failed Screening. "
                        f"The grant cycle is CLOSED. Resubmission is no longer possible.")
                 flash("Proposal marked as Failed Screening. Cycle is closed.", "error")
+                user_message_closed_cycle = msg + " Unfortunately, you cannot resubmit as the cycle has ended."
+                link_closed_cycle = url_for("researcher_my_proposals", cycle_id=proposal.cycle.cycle_id, proposal_id=proposal.proposal_id)
+                send_notification(proposal.researcher.user_info.mmu_id, user_message_closed_cycle, link_closed_cycle, sender_id=user.mmu_id)
 
             # Notification
             link = url_for("researcher_my_proposals")
@@ -1401,6 +1411,7 @@ def reviewer_evaluate_proposal(proposal_id):
     
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
+    hod = HOD.query.get(proposal.assigned_hod_id)
 
     # --- CHECK STATUS & ACCESS ---
     
@@ -1473,26 +1484,33 @@ def reviewer_evaluate_proposal(proposal_id):
                 proposal.status = "Pending HOD Approval"
                 flash(f"Review Submitted (Score: {total_score}). Forwarded to HOD.", "success")
                 
-                # --- NOTIFY HOD ---
-                if proposal.assigned_hod_id:
-                    hod = HOD.query.get(proposal.assigned_hod_id)
-                    if hod:
+                # --- NOTIFY HOD AND USER ---
+                if hod and user:
                         msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
                         link = url_for("hod_dashboard")
+                        msg_passed_review = (f"Update: Your proposal '{proposal.title}' passed the review stage "
+                                             f"with a score of {total_score}/100. It is now pending HOD approval.")
+                        link_passed_review = url_for("researcher_my_proposals")
                         send_notification(
                             hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+                        )
+                        send_notification(
+                            proposal.researcher.user_info.mmu_id,
+                            msg_passed_review,
+                            link_passed_review,
+                            sender_id=user.mmu_id
                         )
             else:
                 proposal.status = "Rejected"
                 flash(f"Review Submitted (Score: {total_score}). Proposal Rejected.", "warning")
                 
                 # --- NOTIFY RESEARCHER ---
-                msg = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100). Reviewer Feedback: {feedback}"
-                link = url_for("researcher_my_proposals")
+                msg_rejected = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100). Reviewer Feedback: {feedback}"
+                link_rejected = url_for("researcher_my_proposals")
                 send_notification(
                     proposal.researcher.user_info.mmu_id,
-                    msg,
-                    link,
+                    msg_rejected,
+                    link_rejected,
                     sender_id=user.mmu_id,
                 )
 
