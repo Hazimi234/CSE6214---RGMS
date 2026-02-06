@@ -11,6 +11,7 @@ from sqlalchemy import func
 
 # Import Database Models
 from models import (
+    ProposalVersion,
     db,
     User,
     Admin,
@@ -26,6 +27,7 @@ from models import (
     Budget,
     Grant,
     ProgressReport,
+    ProposalVersion,
 )
 
 # ============================================================================
@@ -955,11 +957,23 @@ def researcher_login():
 def researcher_dashboard():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    stats = {"my_proposals": 3, "active_grants": 1, "pending_reports": 2}
+    user= User.query.get(session["user_id"])
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+    approved_count = Proposal.query.filter_by(researcher_id=researcher.researcher_id, status="Approved").count()
+    stats = {"my_proposals": Proposal.query.filter_by(researcher_id=researcher.researcher_id).count(),
+            "approved": approved_count,
+            "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id == researcher.researcher_id).count(),
+            "unread_notifs": Notification.query.filter_by(recipient_id=user.mmu_id, is_read=False).count()}
+    
+    recent_proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
+                                     .order_by(Proposal.submission_date.desc()).limit(3).all()
+
     return render_template(
         "researcher_dashboard.html",
         stats=stats,
-        user=User.query.get(session["user_id"]),
+        user=user,
+        researcher=researcher,
+        recent_proposals=recent_proposals
     )
 
 
@@ -999,79 +1013,142 @@ def researcher_apply_list():
 
 @app.route("/researcher/apply/<int:cycle_id>", methods=["GET", "POST"])
 def researcher_submit_form(cycle_id):
-    """Handles proposal submission and file upload."""
-    if session.get("role") != "Researcher":
-        return redirect(url_for("researcher_login"))
-    cycle = GrantCycle.query.get_or_404(cycle_id)
-    user = User.query.get(session["user_id"])
-
-    # If the researcher's faculty doesn't match the grant's faculty, block access.
-    if user.faculty != cycle.faculty:
-        flash(
-            f"Access Denied: You are not eligible for {cycle.faculty} grants.", "error"
-        )
-        return redirect(url_for("researcher_apply_list"))
-
-    if request.method == "POST":
-        # Handle File Upload
-        if "proposal_file" not in request.files:
-            flash("Error: Document required.", "error")
-            return redirect(request.url)
-        file = request.files["proposal_file"]
-        if not (file and allowed_file(file.filename)):
-            flash("Error: Invalid file type.", "error")
-            return redirect(request.url)
-
-        doc_filename = save_document(file)
-
-        # Create Proposal
-        new_proposal = Proposal(
-            title=request.form["title"],
-            research_area=request.form["research_area"],
-            requested_budget=request.form["budget"],
-            status="Submitted",
-            researcher_id=Researcher.query.filter_by(mmu_id=session["user_id"])
-            .first()
-            .researcher_id,
-            cycle_id=cycle.cycle_id,
-            document_file=doc_filename,
-        )
-        db.session.add(new_proposal)
-        db.session.commit()
-
-        # Notify Admin
-        admin = User.query.filter_by(user_role="Admin").first()
-        if admin:
-            msg = f"New Proposal: '{new_proposal.title}' by {user.name}."
-            link = url_for("admin_view_proposal", proposal_id=new_proposal.proposal_id)
-            send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
-
-        flash("Proposal submitted!", "success")
-        return redirect(url_for("researcher_dashboard"))
-
-    return render_template(
-        "researcher_submit_form.html",
-        cycle=cycle,
-        user=user,
-        research_areas=ResearchArea.query.all(),
-    )
-
-@app.route("/researcher/resume/<int:proposal_id>")
-def researcher_resume_proposal(proposal_id):
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
     
-    proposal = Proposal.query.get_or_404(proposal_id)
+    cycle = GrantCycle.query.get_or_404(cycle_id)
     user = User.query.get(session["user_id"])
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
 
-    return render_template(
-        "researcher_resume_dvc.html",
-        cycle= proposal.cycle,
-        proposal=proposal,
-        user=user,
-        research_areas=ResearchArea.query.all())
+    # Eligibility Check
+    if user.faculty != cycle.faculty:
+        flash(f"Access Denied: Ineligible for {cycle.faculty} grants.", "error")
+        return redirect(url_for("researcher_apply_list"))
+
+    # GET Request: Check if we are resuming an existing draft
+    proposal_id = request.args.get("proposal_id")
+    proposal = Proposal.query.get(proposal_id) if proposal_id else None
+
+    if request.method == "POST":
+        proposal_id = request.form.get("proposal_id")
+        action = request.form.get("action")
+        current_status = "Draft" if action == "draft" else "Submitted"
+        
+        file = request.files.get("proposal_file")
+        doc_filename = None
+        
+        # 1. File Upload Processing
+        if file and allowed_file(file.filename):
+            doc_filename = save_document(file)
+        
+        # 2. Preparation for Versioning: Track current values before update
+        if proposal_id:
+            proposal = Proposal.query.get(proposal_id)
+            # Detect changes for the audit trail
+            has_changed = any([
+                doc_filename is not None,
+                proposal.title != request.form.get("title"),
+                proposal.research_area != request.form.get("research_area"),
+                proposal.requested_budget != float(request.form.get("budget", 0))
+            ])
+            
+            # Update existing fields
+            proposal.title = request.form.get("title")
+            proposal.research_area = request.form.get("research_area")
+            proposal.requested_budget = float(request.form.get("budget", 0))
+            proposal.status = current_status
+            if doc_filename:
+                proposal.document_file = doc_filename
+        else:
+            # New Proposal Creation
+            has_changed = True # First time is always a change
+            proposal = Proposal(
+                title=request.form.get("title"),
+                research_area=request.form.get("research_area"),
+                requested_budget=float(request.form.get("budget", 0)),
+                status=current_status,
+                researcher_id=researcher.researcher_id,
+                cycle_id=cycle.cycle_id,
+                document_file=doc_filename
+            )
+            db.session.add(proposal)
+        
+        # Ensure we have a proposal_id for the versioning table
+        db.session.flush() 
+
+        # 3. Versioning Logic (Document Version Control)
+        if has_changed:
+            version_count = ProposalVersion.query.filter_by(proposal_id=proposal.proposal_id).count()
+            
+            # Smart Note Logic
+            if version_count == 0:
+                note = "Initial submission" if (current_status == "Submitted") else "Initial draft"
+            elif doc_filename:
+                note = f"Updated document ({current_status.lower()})"
+            else:
+                note = "Updated proposal details (Title/Budget)"
+
+            new_version = ProposalVersion(
+                proposal_id=proposal.proposal_id,
+                version_number=version_count + 1,
+                document_file=proposal.document_file, # Uses existing file if no new upload
+                upload_date=datetime.now(),
+                title_snapshot=proposal.title,
+                research_area_snapshot=proposal.research_area,
+                budget_snapshot=proposal.requested_budget,
+                version_note=note
+            )
+            db.session.add(new_version)
+
+        db.session.commit()
+
+        # 4. Notifications
+        if current_status == "Submitted":
+            admin = User.query.filter_by(user_role="Admin").first()
+            if admin:
+                msg = f"Proposal Submitted: '{proposal.title}' by {user.name}."
+                link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+                send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
+
+        flash(f"Proposal {current_status.lower()}ed successfully!", "success")
+        return redirect(url_for("researcher_my_proposals"))
+
+    return render_template("researcher_submit_form.html", 
+                           cycle=cycle, user=user, proposal=proposal,
+                           research_areas=ResearchArea.query.all())
 
 
+# 1. Update the path to include BOTH IDs
+@app.route("/researcher/revert/<int:proposal_id>/<int:version_id>")
+def researcher_revert_proposal(proposal_id, version_id):
+    # Flask-SQLAlchemy get_or_404 uses the Primary Key (version_id)
+    v = ProposalVersion.query.get_or_404(version_id)
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # Restore the state from snapshots
+    proposal.document_file = v.document_file
+    proposal.title = v.title_snapshot
+    proposal.research_area = v.research_area_snapshot
+    proposal.requested_budget = v.budget_snapshot
+
+    # Create new audit version
+    new_v_num = ProposalVersion.query.filter_by(proposal_id=proposal.proposal_id).count() + 1
+    revert_log = ProposalVersion(
+        proposal_id=proposal.proposal_id,
+        version_number=new_v_num,
+        document_file=v.document_file,
+        title_snapshot=v.title_snapshot,
+        research_area_snapshot=v.research_area_snapshot,
+        budget_snapshot=v.budget_snapshot,
+        version_note=f"Reverted to Version {v.version_number}",
+        upload_date=datetime.now()  
+    )
+    
+    db.session.add(revert_log)
+    db.session.commit()
+    
+    flash(f"Reverted to Version {v.version_number}", "success")
+    return redirect(url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id))
 
 @app.route("/researcher/proposal_status")
 def researcher_my_proposals():
@@ -1081,7 +1158,7 @@ def researcher_my_proposals():
     
     # Data Retrieval: Get the User and link to their specific Researcher ID
     user = User.query.get(session["user_id"])
-    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).order_by(Researcher.researcher_id.desc()).first()
     
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
@@ -1094,8 +1171,7 @@ def researcher_my_proposals():
     }
 
     # Fetch all proposals for this researcher, newest first
-    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
-                              .order_by(Proposal.submission_date.desc()).all()
+    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id).order_by(Proposal.proposal_id).all()
     
     return render_template("researcher_my_proposals.html", proposals=proposals, user=user, stats=stats)
 
@@ -1105,10 +1181,18 @@ def researcher_withdraw_proposal(proposal_id):
         return redirect(url_for("researcher_login"))
     
     proposal = Proposal.query.get_or_404(proposal_id)
+    user=User.query.get(session["user_id"])
    
     # Withdraw the proposal
     proposal.status = "Withdrawn"
     db.session.commit()
+
+    # Notify Admin
+    admin = User.query.filter_by(user_role="Admin").first()
+    if admin:
+        msg = f"Proposal Withdrawn: '{proposal.title}' by {user.name}."
+        link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+        send_notification(recipient_id=admin.mmu_id, message=msg, link=link, sender_id=user.mmu_id) #send notification to admin 
 
     flash("Proposal withdrawn successfully.", "success")
     return redirect(url_for("researcher_my_proposals"))
@@ -1314,7 +1398,7 @@ def reviewer_screen_proposal(proposal_id):
                 flash("Proposal marked as Failed Screening. Cycle is closed.", "error")
 
             # Notification
-            link = url_for("researcher_dashboard")
+            link = url_for("researcher_my_proposals")
             if proposal.researcher:
                 send_notification(
                     proposal.researcher.user_info.mmu_id,
@@ -1500,8 +1584,8 @@ def reviewer_evaluate_proposal(proposal_id):
                 )
 
                 # --- NOTIFY RESEARCHER ---
-                msg = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100)."
-                link = url_for("researcher_dashboard")
+                msg = f"Update: Your proposal '{proposal.title}' was rejected (Score: {total_score}/100). Reviewer Feedback: {feedback}"
+                link = url_for("researcher_my_proposals")
                 send_notification(
                     proposal.researcher.user_info.mmu_id,
                     msg,
@@ -1653,7 +1737,7 @@ def hod_proposal_decision(proposal_id):
     elif decision == "reject":
         proposal.status = "Rejected"
         flash(f"Proposal '{proposal.title}' Rejected.", "error")
-        send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been REJECTED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+        send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been REJECTED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
 
     db.session.commit()
     return redirect(url_for("hod_view_proposal", proposal_id=proposal.proposal_id))
@@ -1711,7 +1795,7 @@ def hod_update_grant():
 
     db.session.commit()
     flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
-    send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been APPROVED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+    send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been APPROVED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
     return redirect(url_for("hod_grant_allocation"))
 
 @app.route("/hod/grant_budget")
@@ -1868,13 +1952,13 @@ def hod_progress_report_decision():
         report.status = "Validated"
         flash("Progress report validated successfully.", "success")
         # Notify researcher
-        send_notification(report.proposal.researcher.user_info.mmu_id, f"Your progress report '{report.title}' has been VALIDATED.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+        send_notification(report.proposal.researcher.user_info.mmu_id, f"Your progress report '{report.title}' has been VALIDATED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
 
     elif decision == "revision":
         report.status = "Requires Revision"
         flash("Progress report returned for revision.", "info")
         # Notify researcher
-        send_notification(report.proposal.researcher.user_info.mmu_id, f"Action Required: Revision requested for report '{report.title}'.", url_for("researcher_dashboard"), sender_id=user.mmu_id)
+        send_notification(report.proposal.researcher.user_info.mmu_id, f"Action Required: Revision requested for report '{report.title}'.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
 
     db.session.commit()
     return redirect(url_for("hod_view_progress_reports", proposal_id=report.proposal_id))
