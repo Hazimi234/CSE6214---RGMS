@@ -63,7 +63,10 @@ def hod_assigned_proposals():
     page = request.args.get("page", 1, type=int)
     per_page = 8
     query = (
-        Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id)
+        Proposal.query.filter(
+            Proposal.assigned_hod_id == current_hod.hod_id,
+            ~Proposal.status.in_(["Approved", "Completed", "Terminated"]),
+        )
         .join(Researcher)
         .join(User)
     )
