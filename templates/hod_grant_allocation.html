@@ -71,12 +71,12 @@
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background-color: #f8f9fa; text-align: left;">
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Proposal Title</th>
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Researcher</th>
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Requested</th>
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Allocated</th>
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Status</th>
-                                <th style="padding: 15px; border-bottom: 2px solid #eee;">Action</th>
+                                <th style="padding: 15px; width:30%; border-bottom: 2px solid #eee;">Proposal Title</th>
+                                <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Researcher</th>
+                                <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Requested</th>
+                                <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Allocated</th>
+                                <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Status</th>
+                                <th style="padding: 15px; width:10%; border-bottom: 2px solid #eee;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -89,7 +89,7 @@
                                     {% if proposal.grant_award %}
                                     RM {{ "{:,.2f}".format(proposal.grant_award.grant_amount) }}
                                     {% else %}
-                                    --
+                                    RM 0.00
                                     {% endif %}
                                 </td>
                                 <td style="padding: 15px;">

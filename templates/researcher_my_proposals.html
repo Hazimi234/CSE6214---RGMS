@@ -63,17 +63,39 @@
 
 
             <div class="content-wrapper-prop">
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div style="margin-bottom: 20px;">
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}" 
+                                    style="padding: 15px; border-radius: 5px; margin-bottom: 10px; 
+                                            {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                                            {% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                                            {% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+                                            {% else %}background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;{% endif %}">
+                                    <i class="fas 
+                                        {% if category == 'success' %}fa-check-circle
+                                        {% elif category == 'error' %}fa-exclamation-circle
+                                        {% elif category == 'warning' %}fa-exclamation-triangle
+                                        {% else %}fa-info-circle{% endif %}" style="margin-right: 8px;"></i>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
 
                 <div class="card"
                     style="width: 95%; max-width: 1100px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                     <table style="width:100%; border-collapse: collapse; text-align: left;">
                         <thead>
                             <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
-                                <th style="padding: 12px;">ID</th>
-                                <th style="padding: 12px;">Title</th>
-                                <th style="padding: 12px;">Date Submitted</th>
-                                <th style="padding: 12px;">Status</th>
-                                <th style="padding: 12px; text-align: center;">Actions</th>
+                                <th style="padding: 12px; width: 5%;">ID</th>
+                                <th style="padding: 12px; width: 55%;">Title</th>
+                                <th style="padding: 12px; width: 15%;">Date Submitted</th>
+                                <th style="padding: 12px; width: 15%;">Status</th>
+                                <th style="padding: 12px; width: 10%; text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,6 +116,10 @@
                                     {% elif proposal.status == 'Rejected' %} background: #ffebee; color: #c62828;
                                     {% elif proposal.status == 'Under Review' %} background: #fff3e0; color: #ef6c00;
                                     {% elif proposal.status == 'Draft' %} background: #e3f2fd; color: #1565c0;
+                                    {% elif proposal.status == 'Passed Screening' %} background: #e3f2fd; color: #1565c0;
+                                    {% elif proposal.status == 'Failed Screening' %} background: #ffebee; color: #c62828;
+                                    {% elif proposal.status == 'Submitted' %} background: #fff3e0; color: #ef6c00;
+                                    {% elif proposal.status == 'Pending HOD Approval' %} background: #d8bfd8; color: #50404d;
                                     {% else %} background: #f5f5f5; color: #616161; {% endif %}
                                 ">
                                         {{ proposal.status }}
