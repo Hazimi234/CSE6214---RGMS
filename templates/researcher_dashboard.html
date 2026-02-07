@@ -98,7 +98,27 @@
                 </div>
             </div>
 
+            <div style="margin: 30px;">
+                    <h1 style="color: #1b5e20; margin-bottom: 5px;">Welcome, {{ user.name }}!</h1>
+                    <p style="color: #666; font-size: 1.1rem;">
+                        <span
+                            style="background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+                            <i class="fas fa-user-shield"></i> Role: Researcher
+                        </span>
+                    </p>
+                </div>
+
             <div class="content-wrapper-prop" style="display: block;">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
                 
                 <div class="stat-card-row">
                     <div class="lively-card">

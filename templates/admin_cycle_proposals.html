@@ -137,6 +137,12 @@
                                     padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
                                     {% if prop.status == 'Approved' %}background:#c8e6c9; color:#2e7d32;
                                     {% elif prop.status == 'Rejected' %}background:#ffcdd2; color:#c62828;
+                                    {% elif prop.status == 'Under Review' %}background:#fff3e0; color:#ef6c00;
+                                    {% elif prop.status == 'Draft' %}background:#e3f2fd; color:#1565c0;
+                                    {% elif prop.status == 'Passed Screening' %}background:#e3f2fd; color:#1565c0;
+                                    {% elif prop.status == 'Failed Screening' %}background:#ffebee; color:#c62828;
+                                    {% elif prop.status == 'Submitted' %}background:#fff3e0; color:#ef6c00;
+                                    {% elif prop.status == 'Pending HOD Approval' %}background: #d8bfd8; color: #50404d;
                                     {% else %}background:#fff9c4; color:#fbc02d;{% endif %}
                                 ">
                                         {{ prop.status }}

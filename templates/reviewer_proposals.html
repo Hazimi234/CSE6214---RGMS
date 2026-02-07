@@ -131,7 +131,7 @@
                 </div>
 
                 <h3 style="color: #555; margin-bottom: 15px; border-bottom: 2px solid #ccc; padding-bottom: 10px;">
-                    <i class="fas fa-history"></i> Screening History
+                    <i class="fas fa-history"></i> Assigned Proposals History
                 </h3>
 
                 <div class="table-card">
@@ -159,21 +159,25 @@
                                         <span style="
                                             padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
                                             
-                                            /* Green for Passed Screening */
+                                            /* Blue for Passed Screening */
                                             {% if prop.status == 'Passed Screening' %}
-                                                background:#c8e6c9; color:#2e7d32;
+                                                background: #e3f2fd; color: #1565c0;
                                             
                                             /* Red for Failed */
                                             {% elif prop.status == 'Failed Screening' %}
-                                                background:#ffcdd2; color:#c62828;
+                                                background: #ffebee; color: #c62828;
                                             
                                             /* Dark Grey for COI */
                                             {% elif prop.status == 'Return for Reassignment' %}
                                                 background:#424242; color:#fff;
 
-                                            /* --- NEW: BLUE for Pending HOD Approval --- */
+                                            /* Purple for Pending HOD Approval */
                                             {% elif prop.status == 'Pending HOD Approval' %}
-                                                background:#e3f2fd; color:#1565c0;
+                                                background:#d8bfd8; color:#50404d;
+
+                                            /* Green for Aproval from HOD */
+                                            {% elif prop.status == 'Approved' %}
+                                                background:#e8f5e9; color:#2e7d32;    
 
                                             /* Default Grey for others */
                                             {% else %}

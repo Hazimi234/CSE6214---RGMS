@@ -120,7 +120,7 @@
                                 <td style="padding: 15px;">{{ prop.research_area }}</td>
 
                                 <td style="padding: 15px; text-align: center;">
-                                    <span style="background: #c8e6c9; color: #2e7d32; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
+                                    <span style="background: #e3f2fd; color: #1565c0; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
                                         Passed Screening
                                     </span>
                                 </td>
@@ -166,7 +166,7 @@
                 </div>
 
                 <h3 style="color: #666; margin: 40px 0 20px 0; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
-                    <i class="fas fa-history"></i> Evaluation History
+                    <i class="fas fa-history"></i> Reviewed Proposals History
                 </h3>
 
                 <div class="table-card">
@@ -198,11 +198,7 @@
                                 </td>
 
                                 <td style="padding: 15px; text-align: center;">
-                                    {% if hist.status == 'Pending HOD Approval' %}
-                                        <span style="color: #1565c0; font-weight: bold; background: #e3f2fd; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem;">
-                                            <i class="fas fa-clock"></i> Pending HOD
-                                        </span>
-                                    {% elif hist.review_score >= 75 %}
+                                    {% if hist.review_score >= 75 %}
                                         <span style="color: #2e7d32; font-weight: bold;"><i class="fas fa-check"></i> Passed</span>
                                     {% else %}
                                         <span style="color: #c62828; font-weight: bold;"><i class="fas fa-times"></i> Rejected</span>
