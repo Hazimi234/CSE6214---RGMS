@@ -59,12 +59,12 @@ def admin_dashboard():
         funds_utilized_percent = round((funds_utilized / total_fund_capacity) * 100, 1)
 
     today = get_myt_date()
-    next_30_days = today + timedelta(days=30)
+    next_7_days = today + timedelta(days=7)
 
     closing_soon = (
         GrantCycle.query.filter(
             GrantCycle.end_date >= today,
-            GrantCycle.end_date <= next_30_days,
+            GrantCycle.end_date <= next_7_days,
             GrantCycle.is_open == True,
         )
         .order_by(GrantCycle.end_date.asc())
@@ -78,15 +78,31 @@ def admin_dashboard():
         .all()
     )
 
+    active_cycles_count = GrantCycle.query.filter(
+        GrantCycle.is_open == True,
+        GrantCycle.start_date <= today,
+        GrantCycle.end_date >= today,
+    ).count()
+
+    # --- FIX START: COMPREHENSIVE UNDER REVIEW COUNT ---
+    # We now include every stage between "Submitted" and "Approved/Rejected"
+    under_review_statuses = [
+        "Under Review",  # With Reviewer (Screening)
+        "Passed Screening",  # With Reviewer (Scoring)
+        "Pending HOD Approval",  # With HOD (Decision)
+        "Pending Grant",  # With HOD (Allocation)
+    ]
+
+    under_review_count = Proposal.query.filter(
+        Proposal.status.in_(under_review_statuses)
+    ).count()
+    # --- FIX END ---
+
     stats = {
-        "open_cycles": GrantCycle.query.filter_by(is_open=True).count(),
+        "open_cycles": active_cycles_count,
         "total_cycles": GrantCycle.query.count(),
         "new_proposals": Proposal.query.filter_by(status="Submitted").count(),
-        "under_review": Proposal.query.filter(
-            Proposal.status.in_(
-                ["Under Review", "Screening Passed", "Pending HOD Approval"]
-            )
-        ).count(),
+        "under_review": under_review_count,  # <--- Updated variable
         "awarded": Proposal.query.filter_by(status="Approved").count(),
     }
 
@@ -255,14 +271,16 @@ def admin_proposal_management():
 def admin_view_cycle_proposals(cycle_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin.admin_login"))
-    
+
     cycle = GrantCycle.query.get_or_404(cycle_id)
     search_proposal = request.args.get("search", "")
     filter_area = request.args.get("area", "")
     page = request.args.get("page", 1, type=int)
     per_page = 8
 
-    query = Proposal.query.filter(Proposal.cycle_id == cycle.cycle_id, Proposal.status != "Draft")
+    query = Proposal.query.filter(
+        Proposal.cycle_id == cycle.cycle_id, Proposal.status != "Draft"
+    )
 
     if search_proposal:
         query = query.filter(Proposal.title.ilike(f"%{search_proposal}%"))
@@ -312,14 +330,33 @@ def admin_open_cycle():
 def admin_view_proposal(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin.admin_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # --- 1. FACULTY ACCESS CHECK ---
+    # Compare Admin's Faculty vs Proposal Cycle's Faculty
+    if user.faculty != proposal.cycle.faculty:
+        flash(
+            f"Access Denied: You can only manage proposals for {user.faculty}.", "error"
+        )
+        return redirect(url_for("admin.admin_proposal_management"))
+
+    # --- 2. DRAFT CHECK ---
+    if proposal.status == "Draft":
+        flash(
+            "Error: You cannot view this proposal because it is still in Draft mode.",
+            "error",
+        )
+        return redirect(url_for("admin.admin_dashboard"))
+
     final_deadline = Deadline.query.filter_by(
         proposal_id=proposal.proposal_id, deadline_type="Final Submission"
     ).first()
     return render_template(
         "admin_view_proposal.html",
         proposal=proposal,
-        user=User.query.get(session["user_id"]),
+        user=user,
         final_deadline=final_deadline,
     )
 
@@ -328,8 +365,20 @@ def admin_view_proposal(proposal_id):
 def admin_assign_evaluators(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin.admin_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # --- FACULTY ACCESS CHECK ---
+    if user.faculty != proposal.cycle.faculty:
+        flash(
+            f"Access Denied: You cannot assign evaluators for {proposal.cycle.faculty}.",
+            "error",
+        )
+        return redirect(url_for("admin.admin_proposal_management"))
+
     researcher_faculty = proposal.researcher.user_info.faculty
+
     if request.method == "POST":
         reviewer_id = request.form.get("reviewer_id")
         if reviewer_id:
@@ -341,25 +390,29 @@ def admin_assign_evaluators(proposal_id):
                 url_for("reviewer.reviewer_view_proposals"),
                 session["user_id"],
             )
+
         hod_id = request.form.get("hod_id")
         if hod_id:
             proposal.assigned_hod_id = hod_id
+
         proposal.status = "Under Review"
         db.session.commit()
         flash("Evaluators assigned successfully.", "success")
         return redirect(
             url_for("admin.admin_view_proposal", proposal_id=proposal.proposal_id)
         )
+
     reviewers = (
         Reviewer.query.join(User).filter(User.faculty == researcher_faculty).all()
     )
     hods = HOD.query.join(User).filter(User.faculty == researcher_faculty).all()
+
     return render_template(
         "admin_assign_evaluators.html",
         proposal=proposal,
         reviewers=reviewers,
         hods=hods,
-        user=User.query.get(session["user_id"]),
+        user=user,
     )
 
 
@@ -369,13 +422,25 @@ def admin_assign_evaluators(proposal_id):
 def admin_set_final_deadline(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin.admin_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # --- FACULTY ACCESS CHECK ---
+    if user.faculty != proposal.cycle.faculty:
+        flash(
+            f"Access Denied: You cannot manage deadlines for {proposal.cycle.faculty}.",
+            "error",
+        )
+        return redirect(url_for("admin.admin_proposal_management"))
+
     if proposal.status != "Approved":
         flash(
             "Action Locked: You cannot set a final deadline until the HOD approves the grant.",
             "error",
         )
         return redirect(url_for("admin.admin_view_proposal", proposal_id=proposal_id))
+
     if request.method == "POST":
         final_date = request.form.get("final_deadline")
         if final_date:
@@ -401,10 +466,9 @@ def admin_set_final_deadline(proposal_id):
             return redirect(
                 url_for("admin.admin_view_proposal", proposal_id=proposal.proposal_id)
             )
+
     return render_template(
-        "admin_set_final_deadline.html",
-        proposal=proposal,
-        user=User.query.get(session["user_id"]),
+        "admin_set_final_deadline.html", proposal=proposal, user=user
     )
 
 
