@@ -14,15 +14,15 @@
             <div class="sidebar-header"><i class="fas fa-tasks"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('reviewer_dashboard') }}"><i class="fas fa-home"></i>
+                <li><a href="{{ url_for('reviewer.reviewer_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li class="active"><a href="{{ url_for('reviewer_view_proposals') }}"><i
+                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li class="active"><a href="{{ url_for('reviewer.reviewer_view_proposals') }}"><i
                             class="fas fa-clipboard-list"></i> Assigned Proposal</a></li>
-                <li><a href="{{ url_for('reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review
+                <li><a href="{{ url_for('reviewer.reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review
                         Proposal</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -31,7 +31,7 @@
             <div class="top-bar">
                 <h2>My Assigned Proposals</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
-                    <a href="{{ url_for('view_notifications') }}"
+                    <a href="{{ url_for('auth.view_notifications') }}"
                         style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications > 0 %}
@@ -47,7 +47,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">Reviewer</small>
                         </div>
-                        <a href="{{ url_for('reviewer_profile') }}">
+                        <a href="{{ url_for('reviewer.reviewer_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
                                 alt="Profile"
                                 style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
@@ -111,7 +111,7 @@
                                         </span>
                                     </td>
                                     <td style="padding: 15px; text-align: center;">
-                                        <a href="{{ url_for('reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
+                                        <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
                                             class="btn-primary"
                                             style="padding: 6px 15px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none;">
                                             Screen Proposal
@@ -188,7 +188,7 @@
                                         </span>
                                     </td>
                                     <td style="padding: 15px; text-align: center;">
-                                        <a href="{{ url_for('reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
+                                        <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
                                             class="btn-outline"
                                             style="padding: 3px 9px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none; color: #555; border-color: #ccc;">
                                             <i class="fas fa-eye"></i> View

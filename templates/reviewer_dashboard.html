@@ -112,15 +112,15 @@
             <div class="sidebar-header"><i class="fas fa-tasks"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li class="active"><a href="{{ url_for('reviewer_dashboard') }}"><i class="fas fa-home"></i>
+                <li class="active"><a href="{{ url_for('reviewer.reviewer_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('reviewer_view_proposals') }}"><i class="fas fa-clipboard-list"></i> Assigned
+                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('reviewer.reviewer_view_proposals') }}"><i class="fas fa-clipboard-list"></i> Assigned
                         Proposal</a></li>
-                <li><a href="{{ url_for('reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review
+                <li><a href="{{ url_for('reviewer.reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review
                         Proposal</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);"><a
-                        href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                        href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
         </div>
 
@@ -128,7 +128,7 @@
             <div class="top-bar">
                 <h2>Dashboard</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
-                    <a href="{{ url_for('view_notifications') }}"
+                    <a href="{{ url_for('auth.view_notifications') }}"
                         style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications > 0 %}
@@ -145,7 +145,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">Reviewer</small>
                         </div>
-                        <a href="{{ url_for('reviewer_profile') }}">
+                        <a href="{{ url_for('reviewer.reviewer_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
                                 alt="Profile"
                                 style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
@@ -178,7 +178,7 @@
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
 
-                    <a href="{{ url_for('reviewer_view_proposals') }}" style="text-decoration: none;">
+                    <a href="{{ url_for('reviewer.reviewer_view_proposals') }}" style="text-decoration: none;">
                         <div class="dash-card card-yellow">
                             <div class="card-info">
                                 <h3>{{ stats.pending_screenings }}</h3>
@@ -190,7 +190,7 @@
                         </div>
                     </a>
 
-                    <a href="{{ url_for('reviewer_evaluation_list') }}" style="text-decoration: none;">
+                    <a href="{{ url_for('reviewer.reviewer_evaluation_list') }}" style="text-decoration: none;">
                         <div class="dash-card card-green">
                             <div class="card-info">
                                 <h3>{{ stats.pending_reviews }}</h3>
@@ -208,17 +208,17 @@
                     Shortcuts</h3>
 
                 <div class="shortcut-grid">
-                    <a href="{{ url_for('reviewer_view_proposals') }}" class="shortcut-btn">
+                    <a href="{{ url_for('reviewer.reviewer_view_proposals') }}" class="shortcut-btn">
                         <i class="fas fa-search" style="color: #fbc02d;"></i>
                         <span>Screen New Proposals</span>
                     </a>
 
-                    <a href="{{ url_for('reviewer_evaluation_list') }}" class="shortcut-btn">
+                    <a href="{{ url_for('reviewer.reviewer_evaluation_list') }}" class="shortcut-btn">
                         <i class="fas fa-pen-nib" style="color: #2e7d32;"></i>
                         <span>Evaluate Eligible Proposals</span>
                     </a>
 
-                    <a href="{{ url_for('reviewer_profile') }}" class="shortcut-btn">
+                    <a href="{{ url_for('reviewer.reviewer_profile') }}" class="shortcut-btn">
                         <i class="fas fa-user-cog" style="color: #1976d2;"></i>
                         <span>Update My Profile</span>
                     </a>

@@ -16,15 +16,15 @@
 
                 </i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('researcher_dashboard') }}"><i class="fas fa-home"></i>
+                <li><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal
+                <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal
                         Submission</a></li>
-                <li class="active"><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
-                <li class="active"><a href="{{ url_for('researcher_resume_dvc') }}"><i class="fas fa-chart-line"></i> Resume Draft</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_resume_dvc') }}"><i class="fas fa-chart-line"></i> Resume Draft</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -38,7 +38,7 @@
                 <small>Current File: {{ proposal.document_file }}</small>
             </div>
 
-            <form action="{{ url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ url_for('researcher.researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="proposal_id" value="{{ proposal.proposal_id }}">
 
                 <div style="margin-bottom: 15px;">

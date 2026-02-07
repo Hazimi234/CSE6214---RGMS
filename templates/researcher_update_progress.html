@@ -14,7 +14,7 @@
             <div class="sidebar-header"><i class="fas fa-microscope"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-arrow-left"></i> Back to Status</a>
+                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-arrow-left"></i> Back to Status</a>
                 </li>
             </ul>
         </div>
@@ -63,7 +63,7 @@
 
                             <div style="background: #fff3e0; border: 1px solid #ffe0b2; padding: 20px; border-radius: 8px; text-align: left;">
                                 <h4 style="margin-top: 0; color: #ef6c00;"><i class="far fa-clock"></i> Request Extension</h4>
-                                <form action="{{ url_for('researcher_request_extension', proposal_id=proposal.proposal_id) }}" method="POST">
+                                <form action="{{ url_for('researcher.researcher_request_extension', proposal_id=proposal.proposal_id) }}" method="POST">
                                     <div class="form-group" style="margin-bottom: 15px;">
                                         <label style="font-size: 0.9rem;">Reason for Extension</label>
                                         <input type="text" name="extension_reason" placeholder="e.g. Pending final lab results..." required 
@@ -120,7 +120,7 @@
                                 <i class="fas fa-check-circle"></i> Submit Report
                             </button>
 
-                            <a href="{{ url_for('researcher_my_proposals') }}" class="btn-secondary" style="margin-top: 20px; margin-left: 10px; text-decoration: none; display: inline-block; padding: 12px 20px; text-align: center;">
+                            <a href="{{ url_for('researcher.researcher_my_proposals') }}" class="btn-secondary" style="margin-top: 20px; margin-left: 10px; text-decoration: none; display: inline-block; padding: 12px 20px; text-align: center;">
                                 Cancel
                             </a>
 

@@ -14,15 +14,15 @@
             <div class="sidebar-header"><i class="fas fa-building"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i>
+                <li><a href="{{ url_for('hod.hod_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('hod.hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('hod.hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i>
                         Assigned Proposals</a></li>
-                <li class="active"><a href="{{ url_for('hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
-                <li><a href="{{ url_for('hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
-                <li><a href="{{ url_for('hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
+                <li class="active"><a href="{{ url_for('hod.hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
+                <li><a href="{{ url_for('hod.hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
+                <li><a href="{{ url_for('hod.hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -31,7 +31,7 @@
             <div class="top-bar">
                 <h2>Grant Allocation</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
-                    <a href="{{ url_for('view_notifications') }}"
+                    <a href="{{ url_for('auth.view_notifications') }}"
                         style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications > 0 %}
@@ -123,7 +123,7 @@
             <h3 style="color: #1b5e20; margin-top: 0; text-align: center;">Allocate Grant Funds</h3>
             <p style="text-align: center; color: #666; margin-bottom: 20px;">Enter the final approved amount for this proposal.</p>
             
-            <form action="{{ url_for('hod_update_grant') }}" method="POST">
+            <form action="{{ url_for('hod.hod_update_grant') }}" method="POST">
                 <input type="hidden" name="proposal_id" id="modalProposalId">
                 
                 <div class="form-group">

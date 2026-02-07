@@ -63,12 +63,12 @@
                 <i class="fas fa-microscope" style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU
             </div>
             <ul class="sidebar-menu">
-                <li class="active"><a href="{{ url_for('researcher_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal Submission</a></li>
-                <li><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal Submission</a></li>
+                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -77,7 +77,7 @@
             <div class="top-bar">
                 <h2>Researcher Overview</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
-                    <a href="{{ url_for('view_notifications') }}" style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                    <a href="{{ url_for('auth.view_notifications') }}" style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if stats.unread_notifs > 0 %}
                         <span style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
@@ -91,7 +91,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">Researcher</small>
                         </div>
-                        <a href="{{ url_for('researcher_profile') }}">
+                        <a href="{{ url_for('researcher.researcher_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}" alt="Profile" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
                         </a>
                     </div>

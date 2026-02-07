@@ -18,22 +18,22 @@
         <p style="margin-top: 2rem; font-size: 0.9rem;">Select your role to continue:</p>
 
         <div class="role-grid">
-            <a href="{{ url_for('admin_login') }}" class="btn-outline">
+            <a href="{{ url_for('admin.admin_login') }}" class="btn-outline">
                 <i class="fas fa-user-shield"></i>
                 <span>Admin</span>
             </a>
             
-            <a href="{{ url_for('researcher_login') }}" class="btn-outline">
+            <a href="{{ url_for('researcher.researcher_login') }}" class="btn-outline">
                 <i class="fas fa-microscope"></i>
                 <span>Researcher</span>
             </a>
             
-            <a href="{{ url_for('reviewer_login') }}" class="btn-outline">
+            <a href="{{ url_for('reviewer.reviewer_login') }}" class="btn-outline">
                 <i class="fas fa-tasks"></i>
                 <span>Reviewer</span>
             </a>
             
-            <a href="{{ url_for('hod_login') }}" class="btn-outline">
+            <a href="{{ url_for('hod.hod_login') }}" class="btn-outline">
                 <i class="fas fa-building"></i>
                 <span>HOD</span>
             </a>

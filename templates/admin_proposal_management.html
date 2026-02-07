@@ -14,19 +14,21 @@
             <div class="sidebar-header"><i class="fas fa-user-shield"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User
+                <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a>
+                </li>
+                <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
                         Management</a>
                 </li>
-                <li class="active"><a href="{{ url_for('admin_proposal_management') }}"><i
+                <li class="active"><a href="{{ url_for('admin.admin_proposal_management') }}"><i
                             class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
-                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
+                <li><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
                         Tracking</a></li>
-                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System
+                        Configuration</a>
                 </li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -36,7 +38,7 @@
                 <h2>Grant Cycle Management</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
 
-                    <a href="{{ url_for('view_notifications') }}"
+                    <a href="{{ url_for('auth.view_notifications') }}"
                         style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications > 0 %}
@@ -54,7 +56,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">Admin</small>
                         </div>
-                        <a href="{{ url_for('admin_profile') }}">
+                        <a href="{{ url_for('admin.admin_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
                                 alt="Profile"
                                 style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
@@ -100,12 +102,12 @@
                         </button>
 
                         {% if request.args.get('search') or request.args.get('faculty') %}
-                        <a href="{{ url_for('admin_proposal_management') }}" class="btn-outline"
+                        <a href="{{ url_for('admin.admin_proposal_management') }}" class="btn-outline"
                             style="height: 42px; margin-top: 24px; padding: 0 15px; display: flex; align-items: center;">Clear</a>
                         {% endif %}
                     </form>
 
-                    <a href="{{ url_for('admin_open_cycle') }}" class="btn-primary"
+                    <a href="{{ url_for('admin.admin_open_cycle') }}" class="btn-primary"
                         style="width: auto; padding: 10px 20px; margin-left: 20px; background-color: #1b5e20;">
                         <i class="fas fa-plus-circle"></i> Open Submission Cycle
                     </a>
@@ -133,7 +135,7 @@
                                 <td style="padding: 15px; color: #c62828;">{{ cycle.end_date.strftime('%d %b %Y') }}
                                 </td>
                                 <td style="padding: 15px; text-align: center;">
-                                        {% if cycle.end_date < today %} <span
+                                    {% if cycle.end_date < today %} <span
                                         style="background: #ffe0b2; color: #ef6c00; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
                                         CLOSED
                                         </span>
@@ -148,11 +150,17 @@
                                             OPEN
                                         </span>
                                         {% endif %}
-                                </td>
-                                <td style="padding: 15px; text-align: center; color: #555;">{{ cycle.proposals|length }}
+                                <td style="padding: 15px; text-align: center; color: #555;">
+                                    {% set ns = namespace(count=0) %}
+                                    {% for p in cycle.proposals %}
+                                    {% if p.status != 'Draft' %}
+                                    {% set ns.count = ns.count + 1 %}
+                                    {% endif %}
+                                    {% endfor %}
+                                    {{ ns.count }}
                                 </td>
                                 <td style="padding: 15px; text-align: center;">
-                                    <a href="{{ url_for('admin_view_cycle_proposals', cycle_id=cycle.cycle_id) }}"
+                                    <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id) }}"
                                         class="btn-outline"
                                         style="padding: 6px 15px; font-size: 0.9rem; margin: 0 auto; display: inline-flex; width: auto;">
                                         View Proposals <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
@@ -171,7 +179,7 @@
                     {% if pagination.pages > 1 %}
                     <div style="padding: 20px; display: flex; justify-content: center; gap: 5px;">
                         {% if pagination.has_prev %}
-                        <a href="{{ url_for('admin_proposal_management', page=pagination.prev_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
+                        <a href="{{ url_for('admin.admin_proposal_management', page=pagination.prev_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
                             Prev</a>
                         {% endif %}
@@ -184,7 +192,7 @@
                             style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
                             page_num }}</span>
                         {% else %}
-                        <a href="{{ url_for('admin_proposal_management', page=page_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
+                        <a href="{{ url_for('admin.admin_proposal_management', page=page_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
                             }}</a>
                         {% endif %}
@@ -194,7 +202,7 @@
                         {% endfor %}
 
                         {% if pagination.has_next %}
-                        <a href="{{ url_for('admin_proposal_management', page=pagination.next_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
+                        <a href="{{ url_for('admin.admin_proposal_management', page=pagination.next_num, search=request.args.get('search', ''), faculty=request.args.get('faculty', '')) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
                             &raquo;</a>
                         {% endif %}

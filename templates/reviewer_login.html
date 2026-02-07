@@ -26,7 +26,7 @@
             {% endif %}
         {% endwith %}
 
-        <form action="{{ url_for('reviewer_login') }}" method="POST" style="margin-top: 20px;">
+        <form action="{{ url_for('reviewer.reviewer_login') }}" method="POST" style="margin-top: 20px;">
             
             <div class="form-group">
                 <label for="mmu_id">MMU ID</label>
@@ -47,7 +47,7 @@
             <button type="submit" class="btn-primary">Sign In</button>
         </form>
         
-        <a href="{{ url_for('main_login') }}" style="display: block; margin-top: 20px; color: #7f8c8d; text-decoration: none; font-size: 0.9rem;">
+        <a href="{{ url_for('auth.main_login') }}" style="display: block; margin-top: 20px; color: #7f8c8d; text-decoration: none; font-size: 0.9rem;">
             <i class="fas fa-arrow-left"></i> Back to Role Selection
         </a>
     </div>

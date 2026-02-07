@@ -14,20 +14,20 @@
             <div class="sidebar-header"><i class="fas fa-user-shield"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My
+                <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My
                         Account</a></li>
-                <li class="active"><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i>
+                <li class="active"><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i>
                         User Management</a>
                 </li>
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
+                <li><a href="{{ url_for('admin.admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
                         Cycle & Proposal Management</a></li>
-                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
+                <li><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
                         Tracking</a></li>
-                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
                 </li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
@@ -37,7 +37,7 @@
                 <h2>Open Submission Cycle</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
 
-                    <a href="{{ url_for('view_notifications') }}"
+                    <a href="{{ url_for('auth.view_notifications') }}"
                         style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
                         <i class="fas fa-bell"></i>
                         {% if unread_notifications > 0 %}
@@ -55,7 +55,7 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">Admin</small>
                         </div>
-                        <a href="{{ url_for('admin_profile') }}">
+                        <a href="{{ url_for('admin.admin_profile') }}">
                             <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
                                 alt="Profile"
                                 style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
@@ -107,7 +107,7 @@
 
                         <button type="submit" class="btn-primary">Confirm & Open</button>
 
-                        <a href="{{ url_for('admin_proposal_management') }}" class="btn-outline"
+                        <a href="{{ url_for('admin.admin_proposal_management') }}" class="btn-outline"
                             style="margin-top: 10px; width: 100%; box-sizing: border-box; text-align: center; display: block; padding: 14px;">Cancel</a>
                     </form>
                 </div>

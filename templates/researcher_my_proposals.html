@@ -16,71 +16,76 @@
 
                 </i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('researcher_dashboard') }}"><i class="fas fa-home"></i>
+                <li><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal
+                <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My
+                        Account</a></li>
+                <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i>
+                        Proposal
                         Submission</a></li>
-                <li class="active"><a href="{{ url_for('researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i
+                            class="fas fa-chart-line"></i> Proposal Status</a></li>
 
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
             </ul>
         </div>
 
-    <div class="main-content">
-        <div class="top-bar">
-            <h2>Proposal Status</h2>
-            <div style="display: flex; align-items: center; gap: 25px;">
-                <a href="{{ url_for('view_notifications') }}"
-                    style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
-                    <i class="fas fa-bell"></i>
-                    {% if unread_notifications > 0 %}
-                    <span
-                        style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                        {{ unread_notifications }}
-                    </span>
-                    {% endif %}
-                </a>
-                <div style="width: 1px; height: 30px; background: #ddd;"></div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="text-align: right; line-height: 1.3;">
-                        <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
-                        <small style="color: #666;">Researcher</small>
-                    </div>
-                    <a href="{{ url_for('researcher_profile') }}">
-                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
-                            alt="Profile"
-                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Proposal Status</h2>
+                <div style="display: flex; align-items: center; gap: 25px;">
+                    <a href="{{ url_for('auth.view_notifications') }}"
+                        style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                        <span
+                            style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
                     </a>
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: right; line-height: 1.3;">
+                            <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                            <small style="color: #666;">Researcher</small>
+                        </div>
+                        <a href="{{ url_for('researcher.researcher_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
-    
 
-        <div class="content-wrapper-prop">
 
-            <div class="card" style="width: 95%; max-width: 1100px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <table style="width:100%; border-collapse: collapse; text-align: left;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
-                            <th style="padding: 12px;">ID</th>
-                            <th style="padding: 12px;">Title</th>
-                            <th style="padding: 12px;">Date Submitted</th>
-                            <th style="padding: 12px;">Status</th>
-                            <th style="padding: 12px; text-align: center;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for proposal in proposals %}
-                        <tr style="border-bottom: 1px solid #f9f9f9; transition: background 0.2s;">
-                            <td style="padding: 12px; font-family: monospace; color: #1b5e20;">PRP-{{ proposal.proposal_id }}</td>
-                            <td style="padding: 12px; font-weight: 500;">{{ proposal.title }}</td>
-                            <td style="padding: 12px; color: #666;">{{ proposal.submission_date.strftime('%d %b %Y') }}</td>
-                            <td style="padding: 12px;">
-                                <span class="status-badge" 
-                                style="
+            <div class="content-wrapper-prop">
+
+                <div class="card"
+                    style="width: 95%; max-width: 1100px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <table style="width:100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #eee; color: #666; font-size: 0.9rem;">
+                                <th style="padding: 12px;">ID</th>
+                                <th style="padding: 12px;">Title</th>
+                                <th style="padding: 12px;">Date Submitted</th>
+                                <th style="padding: 12px;">Status</th>
+                                <th style="padding: 12px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for proposal in proposals %}
+                            <tr style="border-bottom: 1px solid #f9f9f9; transition: background 0.2s;">
+                                <td style="padding: 12px; font-family: monospace; color: #1b5e20;">PRP-{{
+                                    proposal.proposal_id }}</td>
+                                <td style="padding: 12px; font-weight: 500;">{{ proposal.title }}</td>
+                                <td style="padding: 12px; color: #666;">{{ proposal.submission_date.strftime('%d %b %Y')
+                                    }}</td>
+                                <td style="padding: 12px;">
+                                    <span class="status-badge" style="
                                     padding: 5px 10px; 
                                     border-radius: 20px; 
                                     font-size: 0.8rem; 
@@ -91,57 +96,64 @@
                                     {% elif proposal.status == 'Draft' %} background: #e3f2fd; color: #1565c0;
                                     {% else %} background: #f5f5f5; color: #616161; {% endif %}
                                 ">
-                                    {{ proposal.status }}
-                                </span>
-                            </td>
+                                        {{ proposal.status }}
+                                    </span>
+                                </td>
 
-                            <td style="padding: 12px; display: flex; justify-content: center; align-items: center; gap: 15px;">
-                            
-                            {% if proposal.status == 'Approved' %}
-                                <a href="{{ url_for('researcher_update_progress', proposal_id=proposal.proposal_id) }}" 
-                                   style="color: #2e7d32; text-decoration: none;" title="Progress Reports">
-                                    <i class="fas fa-tasks"></i>
-                                </a>
-                                
-                            
-                            {% elif proposal.status == 'Submitted' %}
-                                <form action="{{ url_for('researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}" 
-                                      method="POST" style="display: flex; align-items: center;" 
-                                      onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
-                                    <button type="submit" style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            
-                            {% elif proposal.status == 'Draft' %}
-                                <a href="{{ url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" 
-                                    style="color: #1565c0; text-decoration: none; font-size: 0.9rem; font-weight: bold;" title="Resume Draft">
-                                    <i class="fas fa-edit"></i> 
-                                </a>
-                                <form action="{{ url_for('researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}" 
-                                      method="POST" style="display: flex; align-items: center;" 
-                                      onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
-                                    <button type="submit" style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            
+                                <td
+                                    style="padding: 12px; display: flex; justify-content: center; align-items: center; gap: 15px;">
+
+                                    {% if proposal.status == 'Approved' %}
+                                    <a href="{{ url_for('researcher.researcher_update_progress', proposal_id=proposal.proposal_id) }}"
+                                        style="color: #2e7d32; text-decoration: none;" title="Progress Reports">
+                                        <i class="fas fa-tasks"></i>
+                                    </a>
+
+
+                                    {% elif proposal.status == 'Submitted' %}
+                                    <form
+                                        action="{{ url_for('researcher.researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}"
+                                        method="POST" style="display: flex; align-items: center;"
+                                        onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
+                                        <button type="submit"
+                                            style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+
+                                    {% elif proposal.status == 'Draft' %}
+                                    <a href="{{ url_for('researcher.researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}"
+                                        style="color: #1565c0; text-decoration: none; font-size: 0.9rem; font-weight: bold;"
+                                        title="Resume Draft">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form
+                                        action="{{ url_for('researcher.researcher_withdraw_proposal', proposal_id=proposal.proposal_id) }}"
+                                        method="POST" style="display: flex; align-items: center;"
+                                        onsubmit="return confirm('Are you sure you want to withdraw this proposal?');">
+                                        <button type="submit"
+                                            style="background: none; border: none; color: #c62828; cursor: pointer; padding: 0; font-size: 1rem;">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+
+                                    {% else %}
+                                    <span style="color: #999; font-weight: bolder;">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
                             {% else %}
-                                <span style="color: #999; font-weight: bolder;">—</span>
-                            {% endif %}
-                            </td>
-                        </tr>
-                    {% else %}
-                        <tr>
-                            <td colspan="5" style="padding: 30px; text-align: center; color: #999;">
-            <i class="fas fa-folder-open" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
-            No proposals submitted yet.
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                            <tr>
+                                <td colspan="5" style="padding: 30px; text-align: center; color: #999;">
+                                    <i class="fas fa-folder-open"
+                                        style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                                    No proposals submitted yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
 </body>
