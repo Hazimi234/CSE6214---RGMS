@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Update Progress - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-microscope"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-arrow-left"></i> Back to Status</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Progress Report Submission</h2> <span>{{ user.name }}</span>
+            </div>
+            
+            <div class="content-wrapper">
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
+                    message }}</div>{% endfor %}{% endif %}
+                {% endwith %}
+
+                <div class="login-card" style="max-width: 800px; margin: 0 auto; text-align: left;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="color: #2e7d32; margin-bottom: 5px;"><i class="fas fa-tasks"></i> Project: {{ proposal.title }}</h3>
+                            <p style="color: #666; margin: 0;"><strong>Grant Cycle:</strong> {{ proposal.cycle.cycle_name }}</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+                                {{ proposal.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <hr>
+
+                    {% if deadline_passed %}
+                        
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 4rem; color: #c62828; margin-bottom: 20px;">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h2 style="color: #c62828; margin-bottom: 10px;">Submission Locked</h2>
+                            <p style="font-size: 1.1rem; color: #555;">
+                                The final submission deadline for this project was 
+                                <strong style="color: #333;">{{ final_deadline.due_date.strftime('%d %B %Y') }}</strong>.
+                            </p>
+                            <p style="color: #666; margin-bottom: 30px;">
+                                You can no longer submit reports or findings unless an extension is granted by the Admin.
+                            </p>
+
+                            <div style="background: #fff3e0; border: 1px solid #ffe0b2; padding: 20px; border-radius: 8px; text-align: left;">
+                                <h4 style="margin-top: 0; color: #ef6c00;"><i class="far fa-clock"></i> Request Extension</h4>
+                                <form action="{{ url_for('researcher.researcher_request_extension', proposal_id=proposal.proposal_id) }}" method="POST">
+                                    <div class="form-group" style="margin-bottom: 15px;">
+                                        <label style="font-size: 0.9rem;">Reason for Extension</label>
+                                        <input type="text" name="extension_reason" placeholder="e.g. Pending final lab results..." required 
+                                               style="width: 100%; padding: 10px; border: 1px solid #ffcc80; border-radius: 5px;">
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="background-color: #ef6c00; border: none; width: 100%;">
+                                        Send Request to Admin
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                    {% else %}
+
+                        <form method="POST" enctype="multipart/form-data">
+
+                            {% if final_deadline %}
+                            <div class="alert alert-info" style="margin-bottom: 20px;">
+                                <i class="fas fa-info-circle"></i> Final Submission Deadline: <strong>{{ final_deadline.due_date.strftime('%d %B %Y') }}</strong>
+                            </div>
+                            {% endif %}
+
+                            <div class="form-group">
+                                <label>Report Title</label>
+                                <input type="text" name="report_title" placeholder="e.g., Final Research Findings" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Progress Summary / Description</label>
+                                <textarea name="description" placeholder="Provide a brief summary of the progress made..." 
+                                    style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; min-height: 120px;"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Financial Usage to Date (RM)</label>
+                                <div class="input-icon-wrapper" style="position: relative;">
+                                    <i class="fas fa-wallet" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #4caf50;"></i>
+                                    <input type="number" name="financial_usage" placeholder="e.g. 1500.00" step="0.01" 
+                                           style="width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa;" required>
+                                </div>
+                                <small style="color: #666;">Total amount spent from the allocated budget so far.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Supporting Document (PDF/DOCX)</label>
+                                <div style="border: 2px dashed #4caf50; padding: 20px; text-align: center; border-radius: 10px; background: #f1f8e9;">
+                                    <i class="fas fa-file-upload" style="font-size: 2rem; color: #2e7d32; margin-bottom: 10px;"></i>
+                                    <p style="margin: 0; font-size: 0.9rem; color: #555;">Upload your detailed progress report or final thesis file</p>
+                                    <input type="file" name="report_file" required style="margin-top: 10px;">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary" style="margin-top: 20px; background-color: #2e7d32;">
+                                <i class="fas fa-check-circle"></i> Submit Report
+                            </button>
+
+                            <a href="{{ url_for('researcher.researcher_my_proposals') }}" class="btn-secondary" style="margin-top: 20px; margin-left: 10px; text-decoration: none; display: inline-block; padding: 12px 20px; text-align: center;">
+                                Cancel
+                            </a>
+
+                        </form>
+
+                    {% endif %}
+                    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

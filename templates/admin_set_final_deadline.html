@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Set Final Deadline - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-user-shield"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
+                        Management</a>
+                </li>
+                <li class="active"><a href="{{ url_for('admin.admin_proposal_management') }}"><i
+                            class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
+                        Tracking</a></li>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Set Project Deadline</h2>
+                <div style="display: flex; align-items: center; gap: 25px;">
+
+                    <a href="{{ url_for('auth.view_notifications') }}"
+                        style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                        <span
+                            style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: right; line-height: 1.3;">
+                            <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                            <small style="color: #666;">Admin</small>
+                        </div>
+                        <a href="{{ url_for('admin.admin_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-wrapper" style="max-width: 600px; margin: 0 auto;">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <a href="{{ url_for('admin.admin_view_proposal', proposal_id=proposal.proposal_id) }}"
+                    style="display: inline-flex; align-items: center; margin-bottom: 20px; color: #666; text-decoration: none;">
+                    <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to Proposal
+                </a>
+
+                <div class="dash-card" style="display: block;">
+                    <h3 style="margin-top: 0; color: #1b5e20;">Final Research Submission</h3>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Set the strict deadline for <strong>{{ proposal.title }}</strong>.
+                        <br>The researcher will not be able to upload their final findings after this date.
+                    </p>
+
+                    <div
+                        style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2e7d32;">
+                        <strong>Proposal Status:</strong> <span
+                            style="color: #2e7d32; font-weight: bold;">APPROVED</span>
+                    </div>
+
+                    <form method="POST">
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Deadline
+                                Date</label>
+                            <input type="date" name="final_deadline" class="form-control" required
+                                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                        </div>
+
+                        <button type="submit" class="btn-primary" style="width: 100%;">
+                            <i class="fas fa-check-circle"></i> Confirm Deadline
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Submit Proposal - GrantSysMMU</title>
+    <title>{% if proposal %}Resume{% else %}New{% endif %} Proposal - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -11,75 +11,152 @@
 <body>
     <div class="dashboard-container">
         <div class="sidebar">
-            <div class="sidebar-header"><i class="fas fa-microscope"></i> GrantSysMMU</div>
+            <div class="sidebar-header">
+                <i class="fas fa-microscope" style="margin-right: 10px; color: var(--secondary-color);"></i> 
+                GrantSysMMU
+            </div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('researcher_apply_list') }}"><i class="fas fa-arrow-left"></i> Back to List</a>
+                <li>
+                    <a href="{{ url_for('researcher.researcher_apply_list') }}">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('researcher.researcher_my_proposals') }}">
+                        <i class="fas fa-tasks"></i> Proposal Status
+                    </a>
                 </li>
             </ul>
         </div>
 
         <div class="main-content">
             <div class="top-bar">
-                <h2>New Proposal Submission</h2> <span>{{ user.name }}</span>
+                <h2>{% if proposal %}Edit Draft{% else %}New Submission{% endif %}</h2> 
+                <span>{{ user.name }}</span>
             </div>
-            <div class="content-wrapper">
 
+            <div class="content-wrapper">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
-                    message }}</div>{% endfor %}{% endif %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" style="padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
                 {% endwith %}
 
-                <div class="login-card" style="max-width: 800px; margin: 0 auto; text-align: left;">
+                <div class="login-card" style="max-width: 850px; margin: 0 auto; text-align: left;">
                     <h3 style="color: #1b5e20;">Application for: {{ cycle.cycle_name }}</h3>
-                    <p><strong>Faculty:</strong> {{ cycle.faculty }} | <strong>Deadline:</strong> {{ cycle.end_date }}
+                    <p>
+                        <strong>Faculty:</strong> {{ cycle.faculty }} | 
+                        <strong>Deadline:</strong> {{ cycle.end_date }}
                     </p>
-                    <hr>
+                    <hr style="border: 0.5px solid #eee; margin: 20px 0;">
 
                     <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="proposal_id" value="{{ proposal.proposal_id if proposal else '' }}">
 
                         <div class="form-group">
                             <label>Research Title</label>
                             <input type="text" name="title" placeholder="Enter the full title of your research"
-                                required>
+                                   value="{{ proposal.title if proposal else '' }}" required>
                         </div>
 
                         <div class="form-group">
                             <label>Research Area</label>
-                            <select name="research_area"
-                                style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa; font-size: 1rem; color: #333;"
-                                required>
+                            <select name="research_area" 
+                                    style="width: 100%; padding: 12px; border: 1px solid #c8e6c9; border-radius: 8px; background: #fafafa;" 
+                                    required>
                                 <option value="">-- Select Area --</option>
                                 {% for area in research_areas %}
-                                <option value="{{ area.name }}">{{ area.name }}</option>
+                                <option value="{{ area.name }}" 
+                                    {% if proposal and proposal.research_area == area.name %}selected{% endif %}>
+                                    {{ area.name }}
+                                </option>
                                 {% endfor %}
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label>Requested Budget (RM)</label>
-                            <div class="input-icon-wrapper">
-                                <i class="fas fa-money-bill-wave"></i>
-                                <input type="number" name="budget" placeholder="e.g. 50000" step="0.01" required>
+                            <div class="input-icon-wrapper" style="position: relative;">
+                                <i class="fas fa-money-bill-wave" style="position: absolute; left: 12px; top: 15px; color: #2e7d32;"></i>
+                                <input type="number" name="budget" placeholder="e.g. 50000" step="0.01" 
+                                       style="padding-left: 40px;" 
+                                       value="{{ proposal.requested_budget if proposal else '' }}" required>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label>Proposal Document (PDF/DOCX)</label>
-                            <div
-                                style="border: 2px dashed #4caf50; padding: 20px; text-align: center; border-radius: 10px; background: #f1f8e9;">
-                                <i class="fas fa-cloud-upload-alt"
-                                    style="font-size: 2rem; color: #2e7d32; margin-bottom: 10px;"></i>
-                                <p style="margin: 0; font-size: 0.9rem; color: #555;">Click to upload your full proposal
+                            <div style="border: 2px dashed #4caf50; padding: 25px; text-align: center; border-radius: 10px; background: #f1f8e9;">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: #2e7d32; margin-bottom: 10px;"></i>
+                                <p style="margin: 0; font-size: 0.95rem; color: #333;">
+                                    {% if proposal and proposal.document_file %}
+                                        <span style="color: #1565c0; font-weight: bold;">
+                                            <i class="fas fa-file-alt"></i> Current: {{ proposal.document_file }}
+                                        </span>
+                                        <br><small>(Upload a new file only if you want to create a new version)</small>
+                                    {% else %}
+                                        Click to upload your full proposal document
+                                    {% endif %}
                                 </p>
-                                <input type="file" name="proposal_file" required style="margin-top: 10px;">
+                                <input type="file" name="proposal_file" {% if not proposal %}required{% endif %} style="margin-top: 15px;">
                             </div>
                         </div>
 
-                        <button type="submit" class="btn-primary" style="margin-top: 20px;">
-                            <i class="fas fa-paper-plane"></i> Submit Proposal
-                        </button>
+                        <div style="margin-top: 30px; display: flex; gap: 15px;">
+                            <button type="submit" name="action" value="submit" class="btn-primary">
+                                <i class="fas fa-paper-plane"></i> Submit Final Proposal
+                            </button>
 
+                            <button type="submit" name="action" value="draft" class="btn-secondary" 
+                                    style="background: white; color: #2e7d32; border: 1px solid #2e7d32;">
+                                <i class="fas fa-save"></i> Save as Draft
+                            </button>
+                        </div>
                     </form>
+
+                    {% if proposal and proposal.versions %}
+                    <div class="version-history-container" style="margin-top: 50px; border-top: 2px solid #f0f0f0; padding-top: 30px;">
+                        <h4 style="color: #2e7d32; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-history"></i> Document Version History
+                        </h4>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">
+                            Every time you upload a new document and save/submit, a record is kept here.
+                        </p>
+                        
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: #f1f8e9; text-align: left; border-bottom: 2px solid #e0e0e0;">
+                                <th style="padding: 12px;">Version</th>
+                                <th style="padding: 12px;">Activity / Note</th> <th style="padding: 12px;">Timestamp</th>
+                                <th style="padding: 12px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in proposal.versions|reverse %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 12px; font-weight: bold;">v{{ v.version_number }}</td>
+                                <td style="padding: 12px; color: #1b5e20;">{{ v.version_note if v.version_note else '-' }}</td>
+                                <td style="padding: 12px; color: #555;">{{ v.upload_date.strftime('%d %b %Y, %I:%M %p') }}</td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <a href="{{ url_for('static', filename='proposal_docs/' + v.document_file) }}" target="_blank" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <a href="{{ url_for('researcher.researcher_revert_proposal', proposal_id=proposal.proposal_id, version_id=v.version_id) }}" 
+                                       style="color: #e65100; margin-left: 10px;" onclick="return confirm('Revert to this state?')">
+                                        <i class="fas fa-undo"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>   
+                    </div>
+                    {% endif %}
+
                 </div>
             </div>
         </div>

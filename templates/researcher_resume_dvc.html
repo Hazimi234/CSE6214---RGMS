@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Researcher Dashboard - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-microscope"
+                    style="margin-right: 10px; color: var(--secondary-color);">
+
+                </i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i>
+                        Dashboard</a></li>
+                <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal
+                        Submission</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li class="active"><a href="{{ url_for('researcher.researcher_resume_dvc') }}"><i class="fas fa-chart-line"></i> Resume Draft</a></li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+    <div class="content-wrapper" style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+        <div style="width: 90%; max-width: 1000px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <h2 style="color: var(--primary-color); margin-bottom: 20px;">Resume Draft: {{ proposal.title }}</h2>
+
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 25px; border-left: 5px solid #1976d2;">
+                <p style="margin: 0; color: #1565c0;"><strong><i class="fas fa-history"></i> DVC Status:</strong> Working on Version {{ (proposal.deadlines|length) + 1 }}</p>
+                <small>Current File: {{ proposal.document_file }}</small>
+            </div>
+
+            <form action="{{ url_for('researcher.researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id) }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="proposal_id" value="{{ proposal.proposal_id }}">
+
+                <div style="margin-bottom: 15px;">
+                    <label>Proposal Title</label>
+                    <input type="text" name="title" value="{{ proposal.title }}" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label>Update Document (New Version)</label>
+                    <input type="file" name="proposal_file" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    <small style="color: #666;">Uploading a new file will increment the document version in the DVC system.</small>
+                </div>
+
+                <div style="margin-top: 25px; display: flex; gap: 15px;">
+                    <button type="submit" name="action" value="submit" class="btn btn-primary" style="padding: 10px 25px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Submit Final Version
+                    </button>
+                    <button type="submit" name="action" value="save" style="padding: 10px 25px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Save as Draft
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>View Proposal - GrantSysMMU</title>
+    <title>Proposal Details - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -14,76 +14,185 @@
             <div class="sidebar-header"><i class="fas fa-user-shield"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-arrow-left"></i> Back to
-                        List</a></li>
+                <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
+                        Management</a>
+                </li>
+                <li class="active"><a href="{{ url_for('admin.admin_proposal_management') }}"><i
+                            class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
+                        Tracking</a></li>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
             </ul>
         </div>
 
         <div class="main-content">
             <div class="top-bar">
-                <h2>Proposal Details</h2> <span>{{ user.name }}</span>
+                <h2>Proposal Details</h2>
+                <div style="display: flex; align-items: center; gap: 25px;">
+
+                    <a href="{{ url_for('auth.view_notifications') }}"
+                        style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                        <span
+                            style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: right; line-height: 1.3;">
+                            <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                            <small style="color: #666;">Admin</small>
+                        </div>
+                        <a href="{{ url_for('admin.admin_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                        </a>
+                    </div>
+                </div>
             </div>
+
             <div class="content-wrapper">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
                     message }}</div>{% endfor %}{% endif %}
                 {% endwith %}
 
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                    <div class="section-card">
-                        <h3 style="color: #1b5e20;">{{ proposal.title }}</h3>
-                        <p><strong>Researcher:</strong> {{ proposal.researcher.user_info.name }} ({{
-                            proposal.researcher.user_info.faculty }})</p>
-                        <p><strong>Cycle:</strong> {{ proposal.cycle.cycle_name }}</p>
-                        <p><strong>Budget Requested:</strong> RM {{ proposal.requested_budget }}</p>
-                        <p><strong>Status:</strong> <span
-                                style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:5px;">{{
-                                proposal.status }}</span></p>
-                        <p><strong>Proposal Document:</strong>
+                <div style="max-width: 900px; margin: 0 auto;">
+
+                    <div class="section-card" style="text-align: center; padding: 40px; margin-bottom: 40px;">
+
+                        <div style="margin-bottom: 15px;">
+                            <span
+                                style="background: {% if proposal.status == 'Approved' %}#c8e6c9{% elif proposal.status == 'Rejected' %}#ffcdd2{% else %}#fff9c4{% endif %}; 
+                                     color: {% if proposal.status == 'Approved' %}#2e7d32{% elif proposal.status == 'Rejected' %}#c62828{% else %}#fbc02d{% endif %}; 
+                                     padding: 6px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+                                {{ proposal.status }}
+                            </span>
+                        </div>
+
+                        <h1 style="color: #1b5e20; margin: 0 0 10px 0; font-size: 2rem;">{{ proposal.title }}</h1>
+                        <p style="color: #666; margin-bottom: 30px;">Submitted on {{
+                            proposal.submission_date.strftime('%d %b %Y') }}</p>
+
+                        <hr
+                            style="border: 0; border-top: 1px solid #eee; margin: 30px 0; width: 60%; margin-left: auto; margin-right: auto;">
+
+                        <div
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; text-align: center; max-width: 700px; margin: 0 auto;">
+
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Researcher</label>
+                                <div style="font-size: 1.1rem; color: #333; font-weight: 500;">{{
+                                    proposal.researcher.user_info.name }}</div>
+                            </div>
+
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Faculty</label>
+                                <div style="font-size: 1.1rem; color: #333; font-weight: 500;">{{
+                                    proposal.researcher.user_info.faculty }}</div>
+                            </div>
+
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Research
+                                    Area</label>
+                                <div style="font-size: 1.1rem; color: #333; font-weight: 500;">{{ proposal.research_area
+                                    }}</div>
+                            </div>
+
+                            <div>
+                                <label
+                                    style="display: block; font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">Requested
+                                    Budget</label>
+                                <div style="font-size: 1.2rem; color: #2e7d32; font-weight: bold;">RM {{
+                                    "{:,.2f}".format(proposal.requested_budget) }}</div>
+                            </div>
+
+                        </div>
+
+                        <div style="margin-top: 35px;">
                             {% if proposal.document_file %}
                             <a href="{{ url_for('static', filename='proposal_docs/' + proposal.document_file) }}"
-                                target="_blank" style="color: #1565c0; text-decoration: underline;">
-                                <i class="fas fa-file-pdf"></i> Download File
+                                target="_blank" class="btn-outline"
+                                style="padding: 10px 25px; font-size: 1rem; display: inline-flex; width: auto; flex-direction: row; gap: 10px; border-radius: 30px;">
+                                <i class="fas fa-file-pdf" style="margin: 0; color: #d32f2f;"></i> View Proposal PDF
                             </a>
                             {% else %}
-                            <span style="color: red;">No file uploaded</span>
+                            <span style="color: #999;">No document attached</span>
                             {% endif %}
-                        </p>
-                        <hr>
-                        <h4>Evaluators</h4>
-                        <p><strong>Reviewer:</strong>
-                            {% if proposal.reviewer %}{{ proposal.reviewer.user_info.name }}{% else %}<span
-                                style="color:red;">Not Assigned</span>{% endif %}
-                            <br><small>Deadline: {{ reviewer_deadline.due_date if reviewer_deadline else 'Not Set'
-                                }}</small>
-                        </p>
-                        <p><strong>HOD:</strong>
-                            {% if proposal.hod %}{{ proposal.hod.user_info.name }}{% else %}<span style="color:red;">Not
-                                Assigned</span>{% endif %}
-                            <br><small>Deadline: {{ hod_deadline.due_date if hod_deadline else 'Not Set' }}</small>
-                        </p>
+                        </div>
+
                     </div>
 
-                    <div class="section-card">
-                        <h4>Actions</h4>
-                        <a href="{{ url_for('admin_assign_evaluators', proposal_id=proposal.proposal_id) }}"
-                            class="btn-primary" style="margin-bottom: 15px; text-align: center;">
-                            <i class="fas fa-user-check"></i> Assign Evaluators
-                        </a>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 60px;">
 
-                        <hr>
-                        <h4>Final Research Deadline</h4>
-                        <form method="POST"
-                            action="{{ url_for('admin_set_final_deadline', proposal_id=proposal.proposal_id) }}">
-                            <div class="form-group">
-                                <label>Submission Deadline</label>
-                                <input type="date" name="final_deadline"
-                                    value="{{ final_deadline.due_date if final_deadline else '' }}" required>
+                        <div class="section-card" style="text-align: center;">
+                            <h3
+                                style="color: #1b5e20; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px; margin-bottom: 25px;">
+                                <i class="fas fa-cogs"></i> Actions
+                            </h3>
+
+                            <div style="display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                                <a href="{{ url_for('admin.admin_assign_evaluators', proposal_id=proposal.proposal_id) }}"
+                                    class="btn-primary"
+                                    style="text-decoration: none; padding: 12px; width: 250px; border-radius: 8px;">
+                                    <i class="fas fa-user-check"></i> Assign Evaluators
+                                </a>
+
+                                <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=proposal.cycle_id) }}"
+                                    class="btn-outline"
+                                    style="text-decoration: none; padding: 12px; width: 250px; border-radius: 8px;">
+                                    <i class="fas fa-arrow-left"></i> Back to List
+                                </a>
                             </div>
-                            <button type="submit" class="btn-outline" style="width: 100%;">Set Deadline</button>
-                        </form>
+                        </div>
+
+                        <div class="section-card">
+                            <h4 style="color: #333; margin-bottom: 15px;">Project Timeline</h4>
+
+                            <div style="margin-bottom: 20px;">
+                                <span style="display: block; font-size: 0.85rem; color: #666;">Final Submission
+                                    Deadline</span>
+                                {% if final_deadline %}
+                                <strong style="color: #c62828; font-size: 1.1rem;">{{
+                                    final_deadline.due_date.strftime('%d %b %Y') }}</strong>
+                                {% else %}
+                                <span style="color: #999;">Not set</span>
+                                {% endif %}
+                            </div>
+
+                            {% if proposal.status == 'Approved' %}
+                            <a href="{{ url_for('admin.admin_set_final_deadline', proposal_id=proposal.proposal_id) }}"
+                                class="btn-primary" style="display: block; text-align: center; text-decoration: none;">
+                                <i class="fas fa-calendar-alt"></i> Set Final Deadline
+                            </a>
+                            {% else %}
+                            <div
+                                style="background: #f5f5f5; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; color: #888;">
+                                <i class="fas fa-lock"></i> Set Final Deadline<br>
+                                <small>(Locked until Approved)</small>
+                            </div>
+                            {% endif %}
+                        </div>
+
                     </div>
+
                 </div>
+
             </div>
         </div>
     </div>

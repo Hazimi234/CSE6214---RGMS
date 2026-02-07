@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Budget Tracking - GrantSysMMU</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header"><i class="fas fa-user-shield"
+                    style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
+            <ul class="sidebar-menu">
+                <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
+                        Management</a></li>
+                <li><a href="{{ url_for('admin.admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
+                        Cycle & Proposal Management</a></li>
+                <li class="active"><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i>
+                        Budget Tracking</a></li>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
+                <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="top-bar">
+                <h2>Grant Budget Tracking</h2>
+                <div style="display: flex; align-items: center; gap: 25px;">
+
+                    <a href="{{ url_for('auth.view_notifications') }}"
+                        style="position: relative; color: #555; font-size: 1.2rem; text-decoration: none;">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications > 0 %}
+                        <span
+                            style="position: absolute; top: -8px; right: -8px; background: #c62828; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <div style="width: 1px; height: 30px; background: #ddd;"></div>
+
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="text-align: right; line-height: 1.3;">
+                            <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
+                            <small style="color: #666;">Admin</small>
+                        </div>
+                        <a href="{{ url_for('admin.admin_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50;">
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-bottom-color: #4caf50;">
+                        <div class="stat-info">
+                            <h3 style="font-size: 1.8rem;">RM {{ "{:,.2f}".format(total_fund) }}</h3>
+                            <p>Total System Fund</p>
+                        </div>
+                        <i class="fas fa-landmark stat-icon" style="color: #4caf50;"></i>
+                    </div>
+
+                    <div class="stat-card" style="border-bottom-color: #d32f2f;">
+                        <div class="stat-info">
+                            <h3 style="color: #d32f2f; font-size: 1.8rem;">RM {{ "{:,.2f}".format(total_allocated) }}
+                            </h3>
+                            <p>Total Allocated (Used)</p>
+                        </div>
+                        <i class="fas fa-hand-holding-usd stat-icon" style="color: #d32f2f;"></i>
+                    </div>
+
+                    <div class="stat-card" style="border-bottom-color: #1565c0;">
+                        <div class="stat-info">
+                            <h3 style="color: #1565c0; font-size: 1.8rem;">RM {{ "{:,.2f}".format(current_balance) }}
+                            </h3>
+                            <p>Remaining Balance</p>
+                        </div>
+                        <i class="fas fa-wallet stat-icon" style="color: #1565c0;"></i>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+
+                    <div class="section-card">
+                        <h3
+                            style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
+                            <i class="fas fa-plus-circle"></i> Add Funds
+                        </h3>
+                        <form method="POST">
+                            <div class="form-group">
+                                <label>Amount (RM)</label>
+                                <input type="number" step="0.01" name="amount" placeholder="e.g. 50000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Description / Source</label>
+                                <input type="text" name="description"
+                                    placeholder="e.g. Annual MMU Research Funding 2026" required>
+                            </div>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-check"></i> Add Funds
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="section-card">
+                        <h3
+                            style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
+                            <i class="fas fa-history"></i> Budget History (Inflow)
+                        </h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f8e9; color: #1b5e20;">
+                                    <th style="padding: 12px; text-align: left;">Date</th>
+                                    <th style="padding: 12px; text-align: left;">Description</th>
+                                    <th style="padding: 12px; text-align: right;">Amount (RM)</th>
+                                    <th style="padding: 12px; text-align: center; width: 120px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in budget_history %}
+                                <tr style="border-bottom: 1px solid #eee;">
+
+                                    <form action="{{ url_for('admin.admin_edit_budget', budget_id=item.budget_id) }}"
+                                        method="POST">
+
+                                        <td style="padding: 12px;">{{ item.created_at.strftime('%d %b %Y') }}</td>
+
+                                        <td style="padding: 12px;">
+                                            <span class="view-mode-{{ item.budget_id }}">{{ item.description }}</span>
+                                            <input type="text" name="description" value="{{ item.description }}"
+                                                class="edit-mode-{{ item.budget_id }}"
+                                                style="display:none; width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                        </td>
+
+                                        <td style="padding: 12px; text-align: right;">
+                                            <span class="view-mode-{{ item.budget_id }}"
+                                                style="font-weight: bold; color: #2e7d32;">
+                                                + {{ "{:,.2f}".format(item.amount) }}
+                                            </span>
+                                            <input type="number" step="0.01" name="amount" value="{{ item.amount }}"
+                                                class="edit-mode-{{ item.budget_id }}"
+                                                style="display:none; width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: right;">
+                                        </td>
+
+                                        <td style="padding: 12px; text-align: center;">
+
+                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
+                                                class="btn-outline view-mode-{{ item.budget_id }}"
+                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #1976d2; border-color: #1976d2;">
+                                                <i class="fas fa-pencil-alt" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+
+                                            <button type="submit" form="delete-form-{{ item.budget_id }}"
+                                                class="btn-outline view-mode-{{ item.budget_id }}"
+                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #d32f2f; border-color: #d32f2f; margin-left: 5px;"
+                                                onclick="return confirm('Are you sure you want to delete this entry?');">
+                                                <i class="fas fa-trash" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+
+                                            <button type="submit" class="btn-primary edit-mode-{{ item.budget_id }}"
+                                                style="display:none; width: auto; padding: 5px 15px; font-size: 0.8rem; margin: 0;">
+                                                Save
+                                            </button>
+
+                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
+                                                class="btn-outline edit-mode-{{ item.budget_id }}"
+                                                style="display:none; padding: 5px 10px; font-size: 0.8rem; margin-left: 5px;">
+                                                <i class="fas fa-times" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+
+                                        </td>
+                                    </form>
+
+                                    <form id="delete-form-{{ item.budget_id }}"
+                                        action="{{ url_for('admin.admin_delete_budget', budget_id=item.budget_id) }}"
+                                        method="POST" style="display: none;"></form>
+
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No budget
+                                        added yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <script>
+                        function toggleEdit(id) {
+                            // Toggle View Elements
+                            document.querySelectorAll('.view-mode-' + id).forEach(el => {
+                                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
+                            });
+
+                            // Toggle Edit Elements
+                            document.querySelectorAll('.edit-mode-' + id).forEach(el => {
+                                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
+                            });
+                        }
+                    </script>
+
+                    <div class="section-card" style="margin-top: 30px;">
+                        <h3
+                            style="color: #d32f2f; margin-bottom: 20px; border-bottom: 2px solid #ffebee; padding-bottom: 10px;">
+                            <i class="fas fa-file-invoice-dollar"></i> Awarded Grants (Outflow)
+                        </h3>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #ffebee; color: #b71c1c;">
+                                    <th style="padding: 12px; text-align: left;">Date Awarded</th>
+                                    <th style="padding: 12px; text-align: left;">Proposal Title</th>
+                                    <th style="padding: 12px; text-align: left;">Researcher</th>
+                                    <th style="padding: 12px; text-align: right;">Grant Amount (RM)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for grant in active_grants %}
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 12px;">{{ grant.award_date.strftime('%d %b %Y') }}</td>
+                                    <td style="padding: 12px;">{{ grant.proposal.title }}</td>
+                                    <td style="padding: 12px;">{{ grant.proposal.researcher.user_info.name }}</td>
+                                    <td style="padding: 12px; text-align: right; font-weight: bold; color: #d32f2f;">
+                                        - {{ "{:,.2f}".format(grant.grant_amount) }}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No grants
+                                        awarded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>
