@@ -35,10 +35,26 @@ def hod_login():
 def hod_dashboard():
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    user = User.query.get(session["user_id"])
+    current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+    
+    pending_approvals = Proposal.query.filter_by(
+        assigned_hod_id=current_hod.hod_id, 
+        status="Pending HOD Approval"
+    ).count()
+    
+    assigned_research_count = Proposal.query.filter(
+        Proposal.assigned_hod_id == current_hod.hod_id,
+        Proposal.status.in_(["Approved", "Completed", "Terminated"])
+    ).count()
+
     return render_template(
         "hod_dashboard.html",
-        stats={"approvals_pending": 8},
-        user=User.query.get(session["user_id"]),
+        stats={
+            "approvals_pending": pending_approvals,
+            "assigned_research": assigned_research_count
+        },
+        user=user,
     )
 
 
