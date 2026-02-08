@@ -60,11 +60,11 @@ def researcher_dashboard():
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
-        ).count(),
+            ).count(),
         "approved": approved_count,
         "active_grants": Grant.query.join(Proposal)
-        .filter(Proposal.researcher_id == researcher.researcher_id)
-        .count(),
+            .filter(Proposal.researcher_id == researcher.researcher_id)
+            .count(),
         "unread_notifs": Notification.query.filter_by(
             recipient_id=user.mmu_id, is_read=False
         ).count(),
