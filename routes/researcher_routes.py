@@ -307,9 +307,7 @@ def researcher_withdraw_proposal(proposal_id):
     return redirect(url_for("researcher.researcher_my_proposals"))
 
 
-@researcher_bp.route(
-    "/researcher/update_progress/<int:proposal_id>", methods=["GET", "POST"]
-)
+@researcher_bp.route("/researcher/update_progress/<int:proposal_id>", methods=["GET", "POST"])
 def researcher_update_progress(proposal_id):
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher.researcher_login"))
@@ -335,11 +333,30 @@ def researcher_update_progress(proposal_id):
                     proposal_id=proposal.proposal_id,
                 )
             )
+        budget_limit=proposal.requested_budget
+        if proposal.grant_award:
+            budget_limit=proposal.grant_award.grant_amount
+        totalused=sum(r.financial_usage for r in proposal.reports)
 
+        new_usage_str=request.form.get("financial_usage")
+        new_usage=float(new_usage_str) if new_usage_str else 0.0
+
+        remaining_balance=budget_limit - totalused
+        if new_usage > remaining_balance:
+            flash(
+                f"Error: Financial usage exceeds remaining budget of RM{remaining_balance:.2f}. If you need more funds, please contact the HOD.",
+                "error",
+            )
+            return redirect(
+                url_for(
+                    "researcher.researcher_update_progress",
+                    proposal_id=proposal.proposal_id,
+                )
+            )
         file = request.files.get("report_file")
         report_title = request.form["report_title"]
-        financial_usage = request.form.get("financial_usage")
         content = request.form.get("description")
+        financial_usage = request.form.get("financial_usage")
         if file and allowed_file(file.filename):
             filename = save_document(file)
             new_report = ProgressReport(

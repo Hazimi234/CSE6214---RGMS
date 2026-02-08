@@ -90,13 +90,13 @@
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f1f8e9; color: #1b5e20;">
-                                <th style="padding: 15px;">ID</th>
-                                <th style="padding: 15px;">Title</th>
-                                <th style="padding: 15px;">Researcher</th>
-                                <th style="padding: 15px;">Faculty</th>
-                                <th style="padding: 15px;">Requested Budget</th>
-                                <th style="padding: 15px;">Status</th>
-                                <th style="padding: 15px;">Action</th>
+                                <th style="padding: 15px; width:5%; ">ID</th>
+                                <th style="padding: 15px; width:30%; ">Title</th>
+                                <th style="padding: 15px; width:15%; ">Researcher</th>
+                                <th style="padding: 15px; width:5%; ">Faculty</th>
+                                <th style="padding: 15px; width:15%; ">Requested Budget</th>
+                                <th style="padding: 15px; width:20%; ">Status</th>
+                                <th style="padding: 15px; width:10%; ">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,6 +112,9 @@
                                         {% if p.status == 'Approved' %}background:#c8e6c9; color:#2e7d32;
                                         {% elif p.status == 'Completed' %}background:#e3f2fd; color:#1565c0;
                                         {% elif p.status == 'Terminated' %}background:#ffcdd2; color:#c62828;
+                                        {% elif p.status == 'Pending HOD Approval' %}background: #d8bfd8; color: #50404d;
+                                        {% elif p.status == 'Failed Screening' %}background: #ffebee; color: #c62828;
+                                        {% elif p.status == 'Passed Screening' %}background: #e3f2fd; color: #1565c0;
                                         {% else %}background:#f5f5f5; color:#666;{% endif %}">
                                         {% if p.status == 'Approved' %}Active{% else %}{{ p.status }}{% endif %}
                                     </span>

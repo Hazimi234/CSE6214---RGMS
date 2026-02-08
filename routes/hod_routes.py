@@ -35,10 +35,25 @@ def hod_login():
 def hod_dashboard():
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    user = User.query.get(session["user_id"])
+    current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+
+    pending_approvals = Proposal.query.filter_by(
+        assigned_hod_id=current_hod.hod_id, status="Pending HOD Approval"
+    ).count()
+
+    assigned_research_count = Proposal.query.filter(
+        Proposal.assigned_hod_id == current_hod.hod_id,
+        Proposal.status.in_(["Approved", "Completed", "Terminated"]),
+    ).count()
+
     return render_template(
         "hod_dashboard.html",
-        stats={"approvals_pending": 8},
-        user=User.query.get(session["user_id"]),
+        stats={
+            "approvals_pending": pending_approvals,
+            "assigned_research": assigned_research_count,
+        },
+        user=user,
     )
 
 
@@ -63,7 +78,10 @@ def hod_assigned_proposals():
     page = request.args.get("page", 1, type=int)
     per_page = 8
     query = (
-        Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id)
+        Proposal.query.filter(
+            Proposal.assigned_hod_id == current_hod.hod_id,
+            ~Proposal.status.in_(["Approved", "Completed", "Terminated"]),
+        )
         .join(Researcher)
         .join(User)
     )
@@ -97,29 +115,41 @@ def hod_view_proposal(proposal_id):
 def hod_proposal_decision(proposal_id):
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
+
+    # Security Check
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
-        flash(
-            "Error: You are not authorized to make decisions on this proposal.", "error"
-        )
+        flash("Error: You are not authorized.", "error")
         return redirect(url_for("hod.hod_assigned_proposals"))
+
     decision = request.form.get("decision")
+
     if decision == "approve":
         proposal.status = "Pending Grant"
-        if not Grant.query.filter_by(proposal_id=proposal.proposal_id).first():
-            new_grant = Grant(
-                grant_amount=proposal.requested_budget, proposal_id=proposal.proposal_id
-            )
+
+        # Check if grant record exists
+        grant = Grant.query.filter_by(proposal_id=proposal.proposal_id).first()
+
+        if grant:
+            # FORCE RESET: If it exists, wipe it to 0.0
+            grant.grant_amount = 0.0
+        else:
+            # Create new with 0.0
+            new_grant = Grant(grant_amount=0.0, proposal_id=proposal.proposal_id)
             db.session.add(new_grant)
+
         flash(
             f"Proposal '{proposal.title}' Approved! You may allocate the grant amount now to finish the approval process.",
             "success",
         )
+
     elif decision == "reject":
         proposal.status = "Rejected"
         flash(f"Proposal '{proposal.title}' Rejected.", "error")
+
         send_notification(
             proposal.researcher.user_info.mmu_id,
             f"Update: Your proposal '{proposal.title}' has been REJECTED.",

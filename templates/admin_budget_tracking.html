@@ -18,8 +18,7 @@
                 <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
                         Management</a></li>
-                <li><a href="{{ url_for('admin.admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
-                        Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin.admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
                 <li class="active"><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i>
                         Budget Tracking</a></li>
                 <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
@@ -64,12 +63,10 @@
 
             <div class="content-wrapper">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-                {% endif %}
+                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
+                    message }}</div>{% endfor %}{% endif %}
                 {% endwith %}
+
                 <div class="stats-grid">
                     <div class="stat-card" style="border-bottom-color: #4caf50;">
                         <div class="stat-info">
@@ -98,11 +95,92 @@
                     </div>
                 </div>
 
+                <div class="section-card" style="margin-top: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
+                        <i class="fas fa-history"></i> Budget History (Inflow)
+                    </h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f1f8e9; color: #1b5e20;">
+                                <th style="padding: 12px; text-align: left; width: 15%;">Date</th>
+                                <th style="padding: 12px; text-align: left; width: 20%;">Added By</th>
+                                <th style="padding: 12px; text-align: left; width: 35%;">Description</th>
+                                <th style="padding: 12px; text-align: right; width: 15%;">Amount (RM)</th>
+                                <th style="padding: 12px; text-align: center; width: 15%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in budget_history %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <form action="{{ url_for('admin.admin_edit_budget', budget_id=item.budget_id) }}" method="POST">
+                                    <td style="padding: 12px;">{{ item.created_at.strftime('%d %b %Y') }}</td>
+                                    
+                                    <td style="padding: 12px;">
+                                        <div style="font-weight: bold; color: #333;">{{ item.admin.name }}</div>
+                                        <div style="font-size: 0.8rem; color: #777;">ID: {{ item.admin_id }}</div>
+                                    </td>
+
+                                    <td style="padding: 12px;">
+                                        <span class="view-mode-{{ item.budget_id }}">{{ item.description }}</span>
+                                        <input type="text" name="description" value="{{ item.description }}"
+                                            class="edit-mode-{{ item.budget_id }}"
+                                            style="display:none; width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+                                    </td>
+                                    <td style="padding: 12px; text-align: right;">
+                                        <span class="view-mode-{{ item.budget_id }}" style="font-weight: bold; color: #2e7d32;">
+                                            + {{ "{:,.2f}".format(item.amount) }}
+                                        </span>
+                                        <input type="number" step="0.01" name="amount" value="{{ item.amount }}"
+                                            class="edit-mode-{{ item.budget_id }}"
+                                            style="display:none; width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: right;">
+                                    </td>
+                                    
+                                    <td style="padding: 12px; text-align: center;">
+                                        {% if item.admin_id == user.mmu_id %}
+                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
+                                                class="btn-outline view-mode-{{ item.budget_id }}"
+                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #1976d2; border-color: #1976d2;">
+                                                <i class="fas fa-pencil-alt" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+                                            <button type="submit" form="delete-form-{{ item.budget_id }}"
+                                                class="btn-outline view-mode-{{ item.budget_id }}"
+                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #d32f2f; border-color: #d32f2f; margin-left: 5px;"
+                                                onclick="return confirm('Are you sure you want to delete this entry?');">
+                                                <i class="fas fa-trash" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+                                            <button type="submit" class="btn-primary edit-mode-{{ item.budget_id }}"
+                                                style="display:none; width: auto; padding: 5px 15px; font-size: 0.8rem; margin: 0;">
+                                                Save
+                                            </button>
+                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
+                                                class="btn-outline edit-mode-{{ item.budget_id }}"
+                                                style="display:none; padding: 5px 10px; font-size: 0.8rem; margin-left: 5px;">
+                                                <i class="fas fa-times" style="font-size: 0.9rem; margin: 0;"></i>
+                                            </button>
+                                        {% else %}
+                                            <span style="color: #999; font-size: 0.85rem;">
+                                                <i class="fas fa-lock"></i> Locked
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </form>
+                                <form id="delete-form-{{ item.budget_id }}"
+                                    action="{{ url_for('admin.admin_delete_budget', budget_id=item.budget_id) }}"
+                                    method="POST" style="display: none;"></form>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="padding: 20px; text-align: center; color: #999;">No budget added yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
 
                     <div class="section-card">
-                        <h3
-                            style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
+                        <h3 style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
                             <i class="fas fa-plus-circle"></i> Add Funds
                         </h3>
                         <form method="POST">
@@ -112,8 +190,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Description / Source</label>
-                                <input type="text" name="description"
-                                    placeholder="e.g. Annual MMU Research Funding 2026" required>
+                                <input type="text" name="description" placeholder="e.g. Annual MMU Research Funding 2026" required>
                             </div>
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-check"></i> Add Funds
@@ -122,131 +199,32 @@
                     </div>
 
                     <div class="section-card">
-                        <h3
-                            style="color: #1b5e20; margin-bottom: 20px; border-bottom: 2px solid #e8f5e9; padding-bottom: 10px;">
-                            <i class="fas fa-history"></i> Budget History (Inflow)
-                        </h3>
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="background: #f1f8e9; color: #1b5e20;">
-                                    <th style="padding: 12px; text-align: left;">Date</th>
-                                    <th style="padding: 12px; text-align: left;">Description</th>
-                                    <th style="padding: 12px; text-align: right;">Amount (RM)</th>
-                                    <th style="padding: 12px; text-align: center; width: 120px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in budget_history %}
-                                <tr style="border-bottom: 1px solid #eee;">
-
-                                    <form action="{{ url_for('admin.admin_edit_budget', budget_id=item.budget_id) }}"
-                                        method="POST">
-
-                                        <td style="padding: 12px;">{{ item.created_at.strftime('%d %b %Y') }}</td>
-
-                                        <td style="padding: 12px;">
-                                            <span class="view-mode-{{ item.budget_id }}">{{ item.description }}</span>
-                                            <input type="text" name="description" value="{{ item.description }}"
-                                                class="edit-mode-{{ item.budget_id }}"
-                                                style="display:none; width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-                                        </td>
-
-                                        <td style="padding: 12px; text-align: right;">
-                                            <span class="view-mode-{{ item.budget_id }}"
-                                                style="font-weight: bold; color: #2e7d32;">
-                                                + {{ "{:,.2f}".format(item.amount) }}
-                                            </span>
-                                            <input type="number" step="0.01" name="amount" value="{{ item.amount }}"
-                                                class="edit-mode-{{ item.budget_id }}"
-                                                style="display:none; width: 100px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: right;">
-                                        </td>
-
-                                        <td style="padding: 12px; text-align: center;">
-
-                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
-                                                class="btn-outline view-mode-{{ item.budget_id }}"
-                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #1976d2; border-color: #1976d2;">
-                                                <i class="fas fa-pencil-alt" style="font-size: 0.9rem; margin: 0;"></i>
-                                            </button>
-
-                                            <button type="submit" form="delete-form-{{ item.budget_id }}"
-                                                class="btn-outline view-mode-{{ item.budget_id }}"
-                                                style="display: inline-block; padding: 5px 10px; font-size: 0.8rem; color: #d32f2f; border-color: #d32f2f; margin-left: 5px;"
-                                                onclick="return confirm('Are you sure you want to delete this entry?');">
-                                                <i class="fas fa-trash" style="font-size: 0.9rem; margin: 0;"></i>
-                                            </button>
-
-                                            <button type="submit" class="btn-primary edit-mode-{{ item.budget_id }}"
-                                                style="display:none; width: auto; padding: 5px 15px; font-size: 0.8rem; margin: 0;">
-                                                Save
-                                            </button>
-
-                                            <button type="button" onclick="toggleEdit('{{ item.budget_id }}')"
-                                                class="btn-outline edit-mode-{{ item.budget_id }}"
-                                                style="display:none; padding: 5px 10px; font-size: 0.8rem; margin-left: 5px;">
-                                                <i class="fas fa-times" style="font-size: 0.9rem; margin: 0;"></i>
-                                            </button>
-
-                                        </td>
-                                    </form>
-
-                                    <form id="delete-form-{{ item.budget_id }}"
-                                        action="{{ url_for('admin.admin_delete_budget', budget_id=item.budget_id) }}"
-                                        method="POST" style="display: none;"></form>
-
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No budget
-                                        added yet.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <script>
-                        function toggleEdit(id) {
-                            // Toggle View Elements
-                            document.querySelectorAll('.view-mode-' + id).forEach(el => {
-                                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
-                            });
-
-                            // Toggle Edit Elements
-                            document.querySelectorAll('.edit-mode-' + id).forEach(el => {
-                                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
-                            });
-                        }
-                    </script>
-
-                    <div class="section-card" style="margin-top: 30px;">
-                        <h3
-                            style="color: #d32f2f; margin-bottom: 20px; border-bottom: 2px solid #ffebee; padding-bottom: 10px;">
+                        <h3 style="color: #d32f2f; margin-bottom: 20px; border-bottom: 2px solid #ffebee; padding-bottom: 10px;">
                             <i class="fas fa-file-invoice-dollar"></i> Awarded Grants (Outflow)
                         </h3>
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
                                 <tr style="background: #ffebee; color: #b71c1c;">
-                                    <th style="padding: 12px; text-align: left;">Date Awarded</th>
-                                    <th style="padding: 12px; text-align: left;">Proposal Title</th>
-                                    <th style="padding: 12px; text-align: left;">Researcher</th>
-                                    <th style="padding: 12px; text-align: right;">Grant Amount (RM)</th>
+                                    <th style="padding: 12px; text-align: left;">Date</th>
+                                    <th style="padding: 12px; text-align: left;">Title</th>
+                                    <th style="padding: 12px; text-align: right;">Amount (RM)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for grant in active_grants %}
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 12px;">{{ grant.award_date.strftime('%d %b %Y') }}</td>
-                                    <td style="padding: 12px;">{{ grant.proposal.title }}</td>
-                                    <td style="padding: 12px;">{{ grant.proposal.researcher.user_info.name }}</td>
+                                    <td style="padding: 12px;">
+                                        <div style="font-weight: bold; color: #444; font-size: 0.9rem;">{{ grant.proposal.title }}</div>
+                                        <div style="font-size: 0.8rem; color: #888;">{{ grant.proposal.researcher.user_info.name }}</div>
+                                    </td>
                                     <td style="padding: 12px; text-align: right; font-weight: bold; color: #d32f2f;">
                                         - {{ "{:,.2f}".format(grant.grant_amount) }}
                                     </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="4" style="padding: 20px; text-align: center; color: #999;">No grants
-                                        awarded yet.</td>
+                                    <td colspan="3" style="padding: 20px; text-align: center; color: #999;">No grants awarded yet.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -256,6 +234,18 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <script>
+        function toggleEdit(id) {
+            document.querySelectorAll('.view-mode-' + id).forEach(el => {
+                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
+            });
+            document.querySelectorAll('.edit-mode-' + id).forEach(el => {
+                el.style.display = el.style.display === 'none' ? 'inline-block' : 'none';
+            });
+        }
+    </script>
 </body>
 
 </html>
