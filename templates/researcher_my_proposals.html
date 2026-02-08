@@ -99,7 +99,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for proposal in proposals %}
+                            {% for proposal in proposals|reverse %}
                             <tr style="border-bottom: 1px solid #f9f9f9; transition: background 0.2s;">
                                 <td style="padding: 12px; font-family: monospace; color: #1b5e20;">PRP-{{
                                     proposal.proposal_id }}</td>
