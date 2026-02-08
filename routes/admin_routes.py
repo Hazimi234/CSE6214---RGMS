@@ -273,20 +273,44 @@ def admin_view_cycle_proposals(cycle_id):
         return redirect(url_for("admin.admin_login"))
 
     cycle = GrantCycle.query.get_or_404(cycle_id)
+    
+    # 1. GET PARAMETERS
     search_proposal = request.args.get("search", "")
     filter_area = request.args.get("area", "")
+    filter_status = request.args.get("status", "")
+    sort_option = request.args.get("sort", "newest")
     page = request.args.get("page", 1, type=int)
     per_page = 8
 
+    # 2. BASE QUERY (Exclude Drafts)
     query = Proposal.query.filter(
         Proposal.cycle_id == cycle.cycle_id, Proposal.status != "Draft"
     )
 
+    # 3. APPLY FILTERS
     if search_proposal:
         query = query.filter(Proposal.title.ilike(f"%{search_proposal}%"))
-    if filter_area:
+    
+    if filter_area and filter_area != "all":
         query = query.filter(Proposal.research_area == filter_area)
+
+    if filter_status and filter_status != "all":
+        query = query.filter(Proposal.status == filter_status)
+
+    # 4. APPLY SORTING (UPDATED)
+    if sort_option == "oldest":
+        # Oldest = Lowest ID first
+        query = query.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    elif sort_option == "status_asc":
+        query = query.order_by(Proposal.status.asc())
+    else:
+        # Default: Newest = Highest ID first
+        query = query.order_by(Proposal.proposal_id.desc())
+
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
     return render_template(
         "admin_cycle_proposals.html",
         cycle=cycle,
@@ -294,8 +318,11 @@ def admin_view_cycle_proposals(cycle_id):
         pagination=pagination,
         user=User.query.get(session["user_id"]),
         research_areas=ResearchArea.query.all(),
+        current_search=search_proposal,
+        current_area=filter_area,
+        current_status=filter_status,
+        current_sort=sort_option
     )
-
 
 @admin_bp.route("/admin/proposals/open", methods=["GET", "POST"])
 def admin_open_cycle():

@@ -67,11 +67,42 @@ def reviewer_view_proposals():
     if not reviewer_profile:
         flash("Error: Reviewer profile not found.", "error")
         return redirect(url_for("reviewer.reviewer_dashboard"))
-    all_assigned = (
-        Proposal.query.filter_by(assigned_reviewer_id=reviewer_profile.reviewer_id)
-        .order_by(Proposal.submission_date.desc())
-        .all()
-    )
+    
+    # --- FILTERS & SORTING ---
+    search_query = request.args.get("search", "")
+    filter_area = request.args.get("area", "")
+    filter_status = request.args.get("status", "")
+    sort_option = request.args.get("sort", "newest")
+
+    query = Proposal.query.filter_by(assigned_reviewer_id=reviewer_profile.reviewer_id)
+
+    # 1. Search
+    if search_query:
+        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+    
+    # 2. Area Filter
+    if filter_area and filter_area != "all":
+        query = query.filter(Proposal.research_area == filter_area)
+
+    # 3. Status Filter
+    if filter_status and filter_status != "all":
+        query = query.filter(Proposal.status == filter_status)
+
+    # 4. Sorting
+    if sort_option == "oldest":
+        query = query.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    elif sort_option == "status_asc":
+        query = query.order_by(Proposal.status.asc())
+    else:
+        # Default: Newest (ID Desc)
+        query = query.order_by(Proposal.proposal_id.desc())
+
+    all_assigned = query.all()
+
+    # Split results into the two categories (Pending vs History)
+    # This ensures filters apply to BOTH tables
     pending_screening = [
         p
         for p in all_assigned
@@ -82,11 +113,18 @@ def reviewer_view_proposals():
         for p in all_assigned
         if p.status not in ["Submitted", "Under Review", "Under Screening"]
     ]
+
     return render_template(
         "reviewer_proposals.html",
         pending_proposals=pending_screening,
         history_proposals=screening_history,
         user=user,
+        research_areas=ResearchArea.query.all(),
+        # Pass filters back to template
+        current_search=search_query,
+        current_area=filter_area,
+        current_status=filter_status,
+        current_sort=sort_option
     )
 
 
@@ -170,24 +208,53 @@ def reviewer_evaluation_list():
         return redirect(url_for("reviewer.reviewer_login"))
     user = User.query.get(session["user_id"])
     reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
+    
+    # --- GET FILTERS ---
     page = request.args.get("page", 1, type=int)
-    search = request.args.get("search", "")
+    search_query = request.args.get("search", "")
+    filter_area = request.args.get("area", "")
+    sort_option = request.args.get("sort", "newest")
+
+    # --- BASE QUERIES ---
+    # 1. Pending: Passed Screening + No Score
     query_pending = Proposal.query.filter(
         Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
         Proposal.status == "Passed Screening",
         Proposal.review_score == None,
     )
-    if search:
-        query_pending = query_pending.filter(Proposal.title.ilike(f"%{search}%"))
-    pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
-    history_proposals = (
-        Proposal.query.filter(
-            Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-            Proposal.review_score != None,
-        )
-        .order_by(Proposal.submission_date.desc())
-        .all()
+
+    # 2. History: Has Score
+    query_history = Proposal.query.filter(
+        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+        Proposal.review_score != None,
     )
+
+    # --- APPLY SEARCH ---
+    if search_query:
+        query_pending = query_pending.filter(Proposal.title.ilike(f"%{search_query}%"))
+        query_history = query_history.filter(Proposal.title.ilike(f"%{search_query}%"))
+
+    # --- APPLY AREA FILTER ---
+    if filter_area and filter_area != "all":
+        query_pending = query_pending.filter(Proposal.research_area == filter_area)
+        query_history = query_history.filter(Proposal.research_area == filter_area)
+
+    # --- APPLY SORTING ---
+    if sort_option == "oldest":
+        query_pending = query_pending.order_by(Proposal.proposal_id.asc())
+        query_history = query_history.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        query_pending = query_pending.order_by(Proposal.title.asc())
+        query_history = query_history.order_by(Proposal.title.asc())
+    else:
+        # Default: Newest First
+        query_pending = query_pending.order_by(Proposal.proposal_id.desc())
+        query_history = query_history.order_by(Proposal.proposal_id.desc())
+
+    # --- EXECUTE ---
+    pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
+    history_proposals = query_history.all()
+
     return render_template(
         "reviewer_evaluation_list.html",
         proposals=pagination.items,
@@ -195,6 +262,10 @@ def reviewer_evaluation_list():
         history=history_proposals,
         user=user,
         research_areas=ResearchArea.query.all(),
+        # Pass filters back to template
+        current_search=search_query,
+        current_area=filter_area,
+        current_sort=sort_option
     )
 
 
