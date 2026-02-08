@@ -1,3 +1,4 @@
+from datetime import datetime, date
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from models import (
     db,
@@ -56,29 +57,34 @@ def researcher_dashboard():
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
-        ).count(),
+            ).count(),
         "approved": approved_count,
         "active_grants": Grant.query.join(Proposal)
-        .filter(Proposal.researcher_id == researcher.researcher_id)
-        .count(),
+            .filter(Proposal.researcher_id == researcher.researcher_id)
+            .count(),
         "unread_notifs": Notification.query.filter_by(
             recipient_id=user.mmu_id, is_read=False
-        ).count(),
+            ).count(),
+        "drafts": Proposal.query.filter_by(
+            researcher_id=researcher.researcher_id, status="Draft"
+            ).count(),
     }
 
-    recent_proposals = (
-        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
-        .order_by(Proposal.submission_date.desc())
-        .limit(3)
-        .all()
-    )
+    current_date=get_myt_date()
+    bulletin_cycles=GrantCycle.query.filter(
+        GrantCycle.is_open == True, 
+        GrantCycle.end_date >= current_date
+    ).order_by(GrantCycle.end_date.asc()).limit(5).all()
+    
     return render_template(
         "researcher_dashboard.html",
         stats=stats,
         user=user,
         researcher=researcher,
-        recent_proposals=recent_proposals,
+        bulletin_cycles=bulletin_cycles,
+        date=date,
     )
+
 
 
 @researcher_bp.route("/researcher/profile", methods=["GET", "POST"])
@@ -141,10 +147,18 @@ def researcher_submit_form(cycle_id):
         current_status = (
             "Draft" if request.form.get("action") == "draft" else "Submitted"
         )
+
+        # --- FILE VALIDATION FIX ---
         file = request.files.get("proposal_file")
         doc_filename = None
-        if file and allowed_file(file.filename):
-            doc_filename = save_document(file)
+        
+        if file and file.filename != "":
+            if allowed_file(file.filename):
+                doc_filename = save_document(file)
+            else:
+                # STOP HERE if file is invalid (e.g., PNG)
+                flash("Error: Invalid file format. Only PDF and DOCX are allowed.", "error")
+                return redirect(request.url) # Reload page, do not save to DB
 
         if proposal:
             has_changed = any(
@@ -269,6 +283,25 @@ def researcher_my_proposals():
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
         return redirect(url_for("researcher.researcher_dashboard"))
+    
+    sort_option = request.args.get("sort", "newest")
+    status_filter = request.args.get("status", "")
+
+    query = Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+    if status_filter and status_filter != "all":
+        query = query.filter_by(status=status_filter)
+
+    if sort_option == "oldest":
+        query = query.order_by(Proposal.proposal_id)
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    elif sort_option == "status_asc":
+        query = query.order_by(Proposal.status.asc())
+    else:
+        query = query.order_by(Proposal.proposal_id.desc())
+
+    proposals = query.all()
+
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
@@ -278,13 +311,13 @@ def researcher_my_proposals():
         .count(),
         "pending_reports": 0,
     }
-    proposals = (
-        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
-        .order_by(Proposal.proposal_id)
-        .all()
-    )
+    # proposals = (
+    #     Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+    #     .order_by(Proposal.proposal_id)
+    #     .all()
+    # )
     return render_template(
-        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats
+        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats, current_sort=sort_option, current_status=status_filter
     )
 
 
@@ -307,9 +340,7 @@ def researcher_withdraw_proposal(proposal_id):
     return redirect(url_for("researcher.researcher_my_proposals"))
 
 
-@researcher_bp.route(
-    "/researcher/update_progress/<int:proposal_id>", methods=["GET", "POST"]
-)
+@researcher_bp.route("/researcher/update_progress/<int:proposal_id>", methods=["GET", "POST"])
 def researcher_update_progress(proposal_id):
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher.researcher_login"))
@@ -335,11 +366,30 @@ def researcher_update_progress(proposal_id):
                     proposal_id=proposal.proposal_id,
                 )
             )
+        budget_limit=proposal.requested_budget
+        if proposal.grant_award:
+            budget_limit=proposal.grant_award.grant_amount
+        totalused=sum(r.financial_usage for r in proposal.reports)
 
+        new_usage_str=request.form.get("financial_usage")
+        new_usage=float(new_usage_str) if new_usage_str else 0.0
+
+        remaining_balance=budget_limit - totalused
+        if new_usage > remaining_balance:
+            flash(
+                f"Error: Financial usage exceeds remaining budget of RM{remaining_balance:.2f}. If you need more funds, please contact the HOD.",
+                "error",
+            )
+            return redirect(
+                url_for(
+                    "researcher.researcher_update_progress",
+                    proposal_id=proposal.proposal_id,
+                )
+            )
         file = request.files.get("report_file")
         report_title = request.form["report_title"]
-        financial_usage = request.form.get("financial_usage")
         content = request.form.get("description")
+        financial_usage = request.form.get("financial_usage")
         if file and allowed_file(file.filename):
             filename = save_document(file)
             new_report = ProgressReport(
