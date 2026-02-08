@@ -16,7 +16,8 @@
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('reviewer.reviewer_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My
+                        Account</a></li>
                 <li class="active"><a href="{{ url_for('reviewer.reviewer_view_proposals') }}"><i
                             class="fas fa-clipboard-list"></i> Assigned Proposal</a></li>
                 <li><a href="{{ url_for('reviewer.reviewer_evaluation_list') }}"><i class="fas fa-history"></i> Review
@@ -59,19 +60,118 @@
             <div class="content-wrapper">
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div style="margin-bottom: 20px;">
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                {% if messages %}
+                <div style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}"
+                        style="padding: 15px; border-radius: 5px; margin-bottom: 10px; 
+                                            {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
+                                            {% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+                                            {% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
+                                            {% else %}background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;{% endif %}">
+                        <i class="fas 
+                                        {% if category == 'success' %}fa-check-circle
+                                        {% elif category == 'error' %}fa-exclamation-circle
+                                        {% elif category == 'warning' %}fa-exclamation-triangle
+                                        {% else %}fa-info-circle{% endif %}" style="margin-right: 8px;"></i>
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% endwith %}
 
-                <h3 style="color: #1b5e20; margin-bottom: 15px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
+                <div
+                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                    <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+
+                        <div style="flex: 2; min-width: 280px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Search
+                                Title</label>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" name="search" value="{{ current_search }}"
+                                    placeholder="e.g. AI Research"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+
+                                {% if current_search or current_area or (current_status and current_status != 'all') or
+                                current_sort != 'newest' %}
+                                <a href="{{ url_for('reviewer.reviewer_view_proposals') }}" class="btn-outline"
+                                    style="height: 38px; padding: 0 15px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #d32f2f; border-color: #d32f2f; font-weight: bold; background: white; box-sizing: border-box; white-space: nowrap;">
+                                    Clear
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Research
+                                Area</label>
+                            <select name="area"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="">All Areas</option>
+                                {% for area in research_areas %}
+                                <option value="{{ area.name }}" {% if current_area==area.name %}selected{% endif %}>{{
+                                    area.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Status</label>
+                            <select name="status"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="all" {% if current_status=='all' %}selected{% endif %}>All Statuses
+                                </option>
+                                <option value="Under Review" {% if current_status=='Under Review' %}selected{% endif %}>
+                                    Under Review</option>
+                                <option value="Passed Screening" {% if current_status=='Passed Screening' %}selected{%
+                                    endif %}>Passed Screening</option>
+                                <option value="Failed Screening" {% if current_status=='Failed Screening' %}selected{%
+                                    endif %}>Failed Screening</option>
+                                <option value="Pending HOD Approval" {% if current_status=='Pending HOD Approval'
+                                    %}selected{% endif %}>Pending HOD</option>
+                                <option value="Approved" {% if current_status=='Approved' %}selected{% endif %}>Approved
+                                </option>
+                                <option value="Return for Reassignment" {% if current_status=='Return for Reassignment'
+                                    %}selected{% endif %}>Return to Admin</option>
+                            </select>
+                        </div>
+
+                        <div style="flex: 1; min-width: 250px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
+                                By</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select name="sort"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                    <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest
+                                        First</option>
+                                    <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest
+                                        First</option>
+                                    <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>
+                                        Title (A-Z)</option>
+                                    <option value="status_asc" {% if current_sort=='status_asc' %}selected{% endif %}>
+                                        Status (A-Z)</option>
+                                </select>
+
+                                <button type="submit" class="btn-primary"
+                                    style="height: 38px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                <h3
+                    style="color: #1b5e20; margin-bottom: 15px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     <i class="fas fa-hourglass-half"></i> Pending Screening
                 </h3>
-                
+
                 <div class="table-card" style="margin-bottom: 40px;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
@@ -86,32 +186,34 @@
                         </thead>
                         <tbody>
                             {% if pending_proposals %}
-                                {% for prop in pending_proposals %}
-                                <tr style="border-bottom: 1px solid #eee;">
-                                    <td style="padding: 15px; color: #888;">#{{ prop.proposal_id }}</td>
-                                    <td style="padding: 15px; font-weight: bold;">{{ prop.title }}</td>
-                                    <td style="padding: 15px;">{{ prop.researcher.user_info.name }}</td>
-                                    <td style="padding: 15px;">{{ prop.research_area }}</td>
-                                    <td style="padding: 15px; text-align: center;">
-                                        <span style="padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; background:#fff9c4; color:#fbc02d; white-space: nowrap;">
-                                            Under Screening
-                                        </span>
-                                    </td>
-                                    <td style="padding: 15px; text-align: center;">
-                                        <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
-                                            class="btn-primary"
-                                            style="padding: 6px 15px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none; white-space: nowrap;">
-                                            Screen Proposal
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                            {% for prop in pending_proposals %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 15px; color: #888;">#{{ prop.proposal_id }}</td>
+                                <td style="padding: 15px; font-weight: bold;">{{ prop.title }}</td>
+                                <td style="padding: 15px;">{{ prop.researcher.user_info.name }}</td>
+                                <td style="padding: 15px;">{{ prop.research_area }}</td>
+
+                                <td style="padding: 15px; text-align: center;">
+                                    <span
+                                        style="padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; background:#fff9c4; color:#fbc02d;">
+                                        Under Screening
+                                    </span>
+                                </td>
+                                <td style="padding: 15px; text-align: center;">
+                                    <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
+                                        class="btn-primary"
+                                        style="padding: 6px 15px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none;">
+                                        Screen Proposal
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
-                                        No pending proposals to screen.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                                    No pending proposals found matching your filters.
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
@@ -135,15 +237,15 @@
                         </thead>
                         <tbody>
                             {% if history_proposals %}
-                                {% for prop in history_proposals %}
-                                <tr style="border-bottom: 1px solid #eee;">
-                                    <td style="padding: 15px; color: #888;">#{{ prop.proposal_id }}</td>
-                                    <td style="padding: 15px; font-weight: bold; color: #555;">{{ prop.title }}</td>
-                                    <td style="padding: 15px; color: #666;">{{ prop.researcher.user_info.name }}</td>
-                                    <td style="padding: 15px; color: #666;">{{ prop.research_area }}</td>
-                                    <td style="padding: 15px; text-align: center;">
-                                        <span style="
-                                            white-space: nowrap;
+                            {% for prop in history_proposals %}
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 15px; color: #888;">#{{ prop.proposal_id }}</td>
+                                <td style="padding: 15px; font-weight: bold; color: #555;">{{ prop.title }}</td>
+                                <td style="padding: 15px; color: #666;">{{ prop.researcher.user_info.name }}</td>
+                                <td style="padding: 15px; color: #666;">{{ prop.research_area }}</td>
+
+                                <td style="padding: 15px; text-align: center;">
+                                    <span style="
                                             padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
                                             {% if prop.status == 'Passed Screening' %}
                                                 background: #e3f2fd; color: #1565c0;
@@ -159,55 +261,62 @@
                                                 background:#e0e0e0; color:#616161;
                                             {% endif %}
                                         ">
-                                            {% if prop.status == 'Return for Reassignment' %}
-                                                Return to Admin
-                                            {% else %}
-                                                {{ prop.status }}
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 15px; text-align: center;">
-                                        <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
-                                            class="btn-outline"
-                                            style="padding: 3px 9px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none; color: #555; border-color: #ccc;">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                                        {% if prop.status == 'Return for Reassignment' %}
+                                        Return to Admin
+                                        {% else %}
+                                        {{ prop.status }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td style="padding: 15px; text-align: center;">
+                                    <a href="{{ url_for('reviewer.reviewer_screen_proposal', proposal_id=prop.proposal_id) }}"
+                                        class="btn-outline"
+                                        style="padding: 3px 9px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none; color: #555; border-color: #ccc;">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
-                                        No history available.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                                    No history available.
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
 
                     {% if history_pagination.pages > 1 %}
-                    <div style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if history_pagination.has_prev %}
-                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.prev_num) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo; Prev</a>
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.prev_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
                         {% endif %}
 
-                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-                            {% if page_num %}
-                                {% if page_num == history_pagination.page %}
-                                    <span class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{ page_num }}</span>
-                                {% else %}
-                                    <a href="{{ url_for('reviewer.reviewer_view_proposals', page=page_num) }}" 
-                                       class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num }}</a>
-                                {% endif %}
-                            {% else %}
-                                <span style="padding: 5px;">...</span>
-                            {% endif %}
+                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == history_pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=page_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
                         {% endfor %}
 
                         {% if history_pagination.has_next %}
-                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.next_num) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next &raquo;</a>
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.next_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -217,4 +326,5 @@
         </div>
     </div>
 </body>
+
 </html>

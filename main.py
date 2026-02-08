@@ -6,7 +6,7 @@ from models import db, Notification
 
 # 1. SETUP APP
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here" # Change this in production
+app.secret_key = "your_secret_key_here" 
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "database.db")
