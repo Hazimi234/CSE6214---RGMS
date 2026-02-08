@@ -63,7 +63,40 @@
 
 
             <div class="content-wrapper-prop">
-                
+                <div style="display: flex; justify-content: flex-start; margin-bottom: 15px;">
+                    <form method="GET" style="display: flex; align-items: center; gap: 15px; background: white; padding: 10px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="status" style="font-weight: bold; color: #555; font-size: 0.9rem;">
+                                <i class="fas fa-filter"></i> Filter:
+                            </label>
+                            <select name="status" id="status" onchange="this.form.submit()" 
+                                    style="padding: 6px 10px; border-radius: 5px; border: 1px solid #ddd; outline: none; cursor: pointer; color: #333; background: #fafafa;">
+                                <option value="" {% if current_status == '' %}selected{% endif %}>All Statuses</option>
+                                <option value="Draft" {% if current_status == 'Draft' %}selected{% endif %}>Draft</option>
+                                <option value="Submitted" {% if current_status == 'Submitted' %}selected{% endif %}>Submitted</option>
+                                <option value="Under Review" {% if current_status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                                <option value="Approved" {% if current_status == 'Approved' %}selected{% endif %}>Approved</option>
+                                <option value="Rejected" {% if current_status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                                <option value="Withdrawn" {% if current_status == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+                            </select>
+                        </div>
+                    
+                        <div style="width: 1px; height: 20px; background: #ddd;"></div>
+                    
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="sort" style="font-weight: bold; color: #555; font-size: 0.9rem;">
+                                <i class="fas fa-sort-amount-down"></i> Sort:
+                            </label>
+                            <select name="sort" id="sort" onchange="this.form.submit()" 
+                                    style="padding: 6px 10px; border-radius: 5px; border: 1px solid #ddd; outline: none; cursor: pointer; color: #333; background: #fafafa;">
+                                <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
+                                <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                            </select>
+                        </div>
+                    
+                    </form>
+                </div>
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         <div style="margin-bottom: 20px;">

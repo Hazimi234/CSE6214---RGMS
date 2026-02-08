@@ -277,6 +277,25 @@ def researcher_my_proposals():
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
         return redirect(url_for("researcher.researcher_dashboard"))
+    
+    sort_option = request.args.get("sort", "newest")
+    status_filter = request.args.get("status", "")
+
+    query = Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+    if status_filter and status_filter != "all":
+        query = query.filter_by(status=status_filter)
+
+    if sort_option == "oldest":
+        query = query.order_by(Proposal.proposal_id)
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    elif sort_option == "status_asc":
+        query = query.order_by(Proposal.status.asc())
+    else:
+        query = query.order_by(Proposal.proposal_id.desc())
+
+    proposals = query.all()
+
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
@@ -286,13 +305,13 @@ def researcher_my_proposals():
         .count(),
         "pending_reports": 0,
     }
-    proposals = (
-        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
-        .order_by(Proposal.proposal_id)
-        .all()
-    )
+    # proposals = (
+    #     Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+    #     .order_by(Proposal.proposal_id)
+    #     .all()
+    # )
     return render_template(
-        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats
+        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats, current_sort=sort_option, current_status=status_filter
     )
 
 
