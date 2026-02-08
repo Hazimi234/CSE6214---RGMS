@@ -269,25 +269,31 @@ def researcher_revert_proposal(proposal_id, version_id):
         )
     )
 
-
-@researcher_bp.route("/researcher/proposal_status")
+@researcher_bp.route("/researcher/my_proposals")
 def researcher_my_proposals():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher.researcher_login"))
+    
     user = User.query.get(session["user_id"])
     researcher = (
         Researcher.query.filter_by(mmu_id=user.mmu_id)
         .order_by(Researcher.researcher_id.desc())
         .first()
     )
+    
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
         return redirect(url_for("researcher.researcher_dashboard"))
     
+    # --- 1. Get Query Parameters ---
     sort_option = request.args.get("sort", "newest")
     status_filter = request.args.get("status", "")
+    page = request.args.get('page', 1, type=int) # Get current page
+    per_page = 8  # Set items per page
 
+    # --- 2. Build Query ---
     query = Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+    
     if status_filter and status_filter != "all":
         query = query.filter_by(status=status_filter)
 
@@ -300,24 +306,29 @@ def researcher_my_proposals():
     else:
         query = query.order_by(Proposal.proposal_id.desc())
 
-    proposals = query.all()
+    # --- 3. Execute Pagination ---
+    # Replace query.all() with query.paginate()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    proposals = pagination.items
 
+    # Keep your stats logic if you need it for the view
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
         ).count(),
-        "active_grants": Grant.query.join(Proposal)
-        .filter(Proposal.researcher_id == researcher.researcher_id)
-        .count(),
+        # Ensure 'Grant' is imported at the top of the file if you use this:
+        # "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id == researcher.researcher_id).count(),
         "pending_reports": 0,
     }
-    # proposals = (
-    #     Proposal.query.filter_by(researcher_id=researcher.researcher_id)
-    #     .order_by(Proposal.proposal_id)
-    #     .all()
-    # )
+
     return render_template(
-        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats, current_sort=sort_option, current_status=status_filter
+        "researcher_my_proposals.html", 
+        proposals=proposals, 
+        pagination=pagination, # Pass pagination object to template
+        user=user, 
+        stats=stats, 
+        current_sort=sort_option, 
+        current_status=status_filter
     )
 
 

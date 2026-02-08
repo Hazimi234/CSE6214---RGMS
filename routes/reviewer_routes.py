@@ -7,15 +7,15 @@ from models import (
     Proposal,
     HOD,
     ResearchArea,
-    Deadline,
+    Researcher,  
     Notification,
 )
 from utils import (
-    check_deadlines_and_notify,
     update_user_profile,
     send_notification,
     get_myt_date,
 )
+
 from datetime import date
 
 reviewer_bp = Blueprint("reviewer", __name__)
@@ -41,7 +41,7 @@ def reviewer_dashboard():
     if session.get("role") != "Reviewer":
         return redirect(url_for("reviewer.reviewer_login"))
     user = User.query.get(session["user_id"])
-    check_deadlines_and_notify(user)
+    
     reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
     stats = {"pending_screenings": 0, "pending_reviews": 0}
     if reviewer_profile:
@@ -109,7 +109,6 @@ def reviewer_view_proposals():
         history_query = history_query.filter(Proposal.research_area == filter_area)
 
     if filter_status and filter_status != "all":
-        # Note: This might filter out everything from one list depending on status
         pending_query = pending_query.filter(Proposal.status == filter_status)
         history_query = history_query.filter(Proposal.status == filter_status)
 
@@ -129,10 +128,8 @@ def reviewer_view_proposals():
         history_query = history_query.order_by(Proposal.proposal_id.desc())
 
     # --- 5. EXECUTE QUERIES ---
-    # Pending is usually small, so we fetch all
     pending_proposals = pending_query.all()
 
-    # History can be large, so we paginate
     history_pagination = history_query.paginate(
         page=page, per_page=per_page, error_out=False
     )
@@ -140,11 +137,10 @@ def reviewer_view_proposals():
     return render_template(
         "reviewer_proposals.html",
         pending_proposals=pending_proposals,
-        history_proposals=history_pagination.items,  # Pass items for loop
-        history_pagination=history_pagination,  # Pass object for page links
+        history_proposals=history_pagination.items,
+        history_pagination=history_pagination,
         user=user,
         research_areas=ResearchArea.query.all(),
-        # Pass filters back to keep state
         current_search=search_query,
         current_area=filter_area,
         current_status=filter_status,
@@ -277,7 +273,6 @@ def reviewer_evaluation_list():
         query_history = query_history.order_by(Proposal.proposal_id.desc())
 
     # --- EXECUTE PAGINATION ---
-    # Paginate BOTH lists independently
     pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
     history_pagination = query_history.paginate(
         page=history_page, per_page=8, error_out=False
@@ -291,7 +286,6 @@ def reviewer_evaluation_list():
         history_pagination=history_pagination,
         user=user,
         research_areas=ResearchArea.query.all(),
-        # Pass filters back to template
         current_search=search_query,
         current_area=filter_area,
         current_sort=sort_option,
@@ -306,30 +300,16 @@ def reviewer_evaluate_proposal(proposal_id):
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
 
-    # --- 1. GET DEADLINE & CHECK OVERDUE ---
-    deadline_obj = Deadline.query.filter_by(
-        proposal_id=proposal_id, deadline_type="Reviewer"
-    ).first()
-
-    is_overdue = False
-    if deadline_obj and deadline_obj.due_date:
-        if date.today() > deadline_obj.due_date:
-            is_overdue = True
-
-    # --- 2. CHECK STATUS & ACCESS ---
+    # CHECK STATUS & ACCESS
     readonly = False
 
     # Case A: Passed Screening (Pending Review)
     if proposal.status == "Passed Screening":
-        if is_overdue:
-            readonly = True  # Lock it if overdue
-        else:
-            readonly = False  # Editable if within deadline
+        readonly = False  # Always editable if pending
 
     # Case B: Already Reviewed (History)
     elif proposal.review_score is not None:
         readonly = True
-        is_overdue = False  # Don't show overdue warning for completed tasks
 
     else:
         flash(
@@ -347,45 +327,6 @@ def reviewer_evaluate_proposal(proposal_id):
 
     if request.method == "POST":
         action = request.form.get("action")
-
-        # --- NEW ACTION: REQUEST EXTENSION ---
-        if action == "request_extension":
-            admin = User.query.filter_by(user_role="Admin").first()
-            if admin:
-                msg = f"Extension Request: Reviewer {user.name} requests more time for '{proposal.title}'."
-                link = url_for(
-                    "admin.admin_view_proposal", proposal_id=proposal.proposal_id
-                )
-                send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
-
-            flash("Extension request sent to Admin.", "info")
-            return redirect(url_for("reviewer.reviewer_evaluation_list"))
-
-        # --- NEW ACTION: RETURN TASK (Due to timeout) ---
-        elif action == "return_task":
-            proposal.status = "Return for Reassignment"
-            proposal.assigned_reviewer_id = (
-                None  # Optional: Clear assignment immediately
-            )
-
-            admin = User.query.filter_by(user_role="Admin").first()
-            if admin:
-                msg = f"Task Returned: Reviewer {user.name} missed deadline for '{proposal.title}'."
-                link = url_for(
-                    "admin.admin_view_proposal", proposal_id=proposal.proposal_id
-                )
-                send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
-
-            db.session.commit()
-            flash("Task returned to Admin.", "warning")
-            return redirect(url_for("reviewer.reviewer_evaluation_list"))
-
-        # Normal Submit Logic (Only if NOT Overdue)
-        if is_overdue:
-            flash("Deadline passed. You cannot save or submit.", "error")
-            return redirect(
-                url_for("reviewer.reviewer_evaluate_proposal", proposal_id=proposal_id)
-            )
 
         # 1. COLLECT FORM DATA
         data = {}
@@ -469,5 +410,5 @@ def reviewer_evaluate_proposal(proposal_id):
         user=user,
         saved_answers=saved_answers,
         readonly=readonly,
-        is_overdue=is_overdue,
+        is_overdue=False, # Hardcode to False to prevent template errors if variable is used
     )

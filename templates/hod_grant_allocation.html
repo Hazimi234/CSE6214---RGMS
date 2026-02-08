@@ -50,8 +50,11 @@
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
                             <small style="color: #666;">HOD</small>
                         </div>
-                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
-                            style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+                        <a href="{{ url_for('hod.hod_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+                        </a>
                     </div>
                 </div>
             </div>
@@ -163,7 +166,7 @@
                                 </td>
                                 <td style="padding: 15px;">
                                     <span
-                                        style="padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold;
+                                        style="padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; white-space:nowrap;
                                         background: {% if proposal.status == 'Approved' %}#c8e6c9{% else %}#fff9c4{% endif %};
                                         color: {% if proposal.status == 'Approved' %}#2e7d32{% else %}#fbc02d{% endif %};">
                                         {{ proposal.status }}
