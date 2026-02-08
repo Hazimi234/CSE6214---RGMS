@@ -79,6 +79,12 @@
                                 <option value="Approved" {% if current_status == 'Approved' %}selected{% endif %}>Approved</option>
                                 <option value="Rejected" {% if current_status == 'Rejected' %}selected{% endif %}>Rejected</option>
                                 <option value="Withdrawn" {% if current_status == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+                                <option value="Passed Screening" {% if current_status == 'Passed Screening' %}selected{% endif %}>Passed Screening</option>
+                                <option value="Failed Screening" {% if current_status == 'Failed Screening' %}selected{% endif %}>Failed Screening</option>
+                                <option value="Pending HOD Approval" {% if current_status == 'Pending HOD Approval' %}selected{% endif %}>Pending HOD Approval</option>
+                                <option value="Pending Grant" {% if current_status == 'Pending Grant' %}selected{% endif %}>Pending Grant</option>
+                                <option value="Return for Reassignment" {% if current_status == 'Return for Reassignment' %}selected{% endif %}>Return for Reassignment</option>
+
                             </select>
                         </div>
                     
@@ -132,7 +138,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for proposal in proposals|reverse %}
+                            {% for proposal in proposals %}
                             <tr style="border-bottom: 1px solid #f9f9f9; transition: background 0.2s;">
                                 <td style="padding: 12px; font-family: monospace; color: #1b5e20;">PRP-{{
                                     proposal.proposal_id }}</td>
@@ -153,6 +159,9 @@
                                     {% elif proposal.status == 'Failed Screening' %} background: #ffebee; color: #c62828;
                                     {% elif proposal.status == 'Submitted' %} background: #fff3e0; color: #ef6c00;
                                     {% elif proposal.status == 'Pending HOD Approval' %} background: #d8bfd8; color: #50404d;
+                                    {% elif proposal.status == 'Pending Grant' %}background: #e0f2f1; color: #00695c;
+                                    {% elif proposal.status == 'Return for Reassignment' %}background: #fbe9e7; color: #d84315;
+                                    {% elif proposal.status == 'Withdrawn' %}background: #eeeeee; color: #616161;
                                     {% else %} background: #f5f5f5; color: #616161; {% endif %}
                                 ">
                                         {{ proposal.status }}

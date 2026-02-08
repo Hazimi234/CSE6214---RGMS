@@ -270,7 +270,7 @@ def researcher_revert_proposal(proposal_id, version_id):
     )
 
 
-@researcher_bp.route("/researcher/proposal_status")
+@researcher_bp.route("/researcher/my_proposals")
 def researcher_my_proposals():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher.researcher_login"))
