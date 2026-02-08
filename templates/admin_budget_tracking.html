@@ -211,7 +211,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for grant in active_grants %}
+                                {% for grant in active_grants.items %}
                                 <tr style="border-bottom: 1px solid #eee;">
                                     <td style="padding: 12px;">{{ grant.award_date.strftime('%d %b %Y') }}</td>
                                     <td style="padding: 12px;">
@@ -229,6 +229,47 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+
+                        {% if active_grants.pages > 1 %}
+                        <div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                            
+                            {% if active_grants.has_prev %}
+                                <a href="{{ url_for('admin.admin_budget_tracking', page=active_grants.prev_num) }}" 
+                                   class="btn-outline" 
+                                   style="min-width: 32px; height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px; text-decoration: none;">
+                                   &laquo;
+                                </a>
+                            {% endif %}
+
+                            {% for page_num in active_grants.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                                {% if page_num %}
+                                    {% if active_grants.page == page_num %}
+                                        <span style="min-width: 32px; height: 32px; padding: 0 5px; display: flex; align-items: center; justify-content: center; background-color: #d32f2f; color: white; border-radius: 4px; font-size: 0.8rem; font-weight: bold; cursor: default;">
+                                            {{ page_num }}
+                                        </span>
+                                    {% else %}
+                                        <a href="{{ url_for('admin.admin_budget_tracking', page=page_num) }}" 
+                                           class="btn-outline" 
+                                           style="min-width: 32px; height: 32px; padding: 0 5px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px; text-decoration: none;">
+                                           {{ page_num }}
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <span style="color: #999; font-size: 0.8rem;">...</span>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if active_grants.has_next %}
+                                <a href="{{ url_for('admin.admin_budget_tracking', page=active_grants.next_num) }}" 
+                                   class="btn-outline" 
+                                   style="min-width: 32px; height: 32px; padding: 0 10px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 4px; text-decoration: none;">
+                                   &raquo;
+                                </a>
+                            {% endif %}
+                            
+                        </div>
+                        {% endif %}
+                        
                     </div>
 
                 </div>

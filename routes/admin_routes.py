@@ -474,9 +474,12 @@ def admin_set_final_deadline(proposal_id):
 
 @admin_bp.route("/admin/budget", methods=["GET", "POST"])
 def admin_budget_tracking():
+
     if session.get("role") != "Admin":
         return redirect(url_for("admin.admin_login"))
+    
     if request.method == "POST":
+
         try:
             amount = float(request.form["amount"])
             description = request.form["description"]
@@ -488,14 +491,25 @@ def admin_budget_tracking():
             flash(
                 f"Successfully added RM {amount:,.2f} to the system budget.", "success"
             )
+
         except ValueError:
             flash("Error: Invalid amount entered.", "error")
         return redirect(url_for("admin.admin_budget_tracking"))
+    
     total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
     total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
     current_balance = total_budget_in - total_grants_out
     budget_history = Budget.query.order_by(Budget.created_at.desc()).all()
-    active_grants = Grant.query.order_by(Grant.award_date.desc()).all()
+
+    # --- PAGINATION LOGIC START ---
+    page = request.args.get('page', 1, type=int)
+    per_page = 6
+    
+    active_grants = Grant.query.order_by(Grant.award_date.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    # --- PAGINATION LOGIC END ---
+
     return render_template(
         "admin_budget_tracking.html",
         user=User.query.get(session["user_id"]),
@@ -503,7 +517,7 @@ def admin_budget_tracking():
         total_allocated=total_grants_out,
         current_balance=current_balance,
         budget_history=budget_history,
-        active_grants=active_grants,
+        active_grants=active_grants
     )
 
 
