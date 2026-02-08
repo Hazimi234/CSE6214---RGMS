@@ -144,7 +144,7 @@
                             <label
                                 style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
                                 By</label>
-                            <div style="display: flex; gap: 10px;">
+                            <div style="display: flex; gap: 10px; align-items: end; height: 40px;">
                                 <select name="sort"
                                     style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
                                     <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest
@@ -246,7 +246,7 @@
 
                                 <td style="padding: 15px; text-align: center;">
                                     <span style="
-                                            padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
+                                            padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; white-space:nowrap;
                                             {% if prop.status == 'Passed Screening' %}
                                                 background: #e3f2fd; color: #1565c0;
                                             {% elif prop.status == 'Failed Screening' %}

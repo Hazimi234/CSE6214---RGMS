@@ -18,6 +18,10 @@ hod_bp = Blueprint("hod", __name__)
 
 @hod_bp.route("/hod/login", methods=["POST", "GET"])
 def hod_login():
+    """
+    Handles the login process for Head of Department (HOD) users.
+    Verifies credentials against the database and establishes a session.
+    """
     if request.method == "POST":
         user = User.query.filter_by(
             mmu_id=request.form["mmu_id"], user_role="HOD"
@@ -33,6 +37,11 @@ def hod_login():
 
 @hod_bp.route("/hod/dashboard")
 def hod_dashboard():
+    """
+    Renders the HOD dashboard.
+    Calculates and displays statistics such as pending proposal approvals
+    and the count of assigned active/completed research projects.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -59,6 +68,10 @@ def hod_dashboard():
 
 @hod_bp.route("/hod/profile", methods=["GET", "POST"])
 def hod_profile():
+    """
+    Allows the HOD to view and update their profile information.
+    Handles password changes and profile picture uploads via utils.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -70,6 +83,10 @@ def hod_profile():
 
 @hod_bp.route("/hod/proposals")
 def hod_assigned_proposals():
+    """
+    Lists proposals assigned to the current HOD that require attention.
+    Filters out proposals that are already approved, completed, or terminated.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
@@ -101,6 +118,9 @@ def hod_assigned_proposals():
 
 @hod_bp.route("/hod/proposals/view/<int:proposal_id>")
 def hod_view_proposal(proposal_id):
+    """
+    Displays the detailed view of a specific proposal for the HOD to review.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal = Proposal.query.get_or_404(proposal_id)
@@ -113,6 +133,11 @@ def hod_view_proposal(proposal_id):
 
 @hod_bp.route("/hod/proposals/decision/<int:proposal_id>", methods=["POST"])
 def hod_proposal_decision(proposal_id):
+    """
+    Processes the HOD's decision to Approve or Reject a proposal.
+    - If Approved: Sets status to 'Pending Grant' and initializes a Grant record.
+    - If Rejected: Sets status to 'Rejected' and notifies the researcher/admin.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
 
@@ -169,6 +194,10 @@ def hod_proposal_decision(proposal_id):
 
 @hod_bp.route("/hod/grant_allocation")
 def hod_grant_allocation():
+    """
+    Displays proposals that have been approved but are awaiting grant amount allocation.
+    Shows the remaining system budget available for allocation.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -227,23 +256,32 @@ def hod_grant_allocation():
 
 @hod_bp.route("/hod/grant_allocation/update", methods=["POST"])
 def hod_update_grant():
+    """
+    Updates the allocated grant amount for a specific proposal.
+    Moves the proposal status to 'Approved' if it was 'Pending Grant'.
+    Notifies the researcher and admin upon successful allocation.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal_id = request.form.get("proposal_id")
     new_amount = float(request.form.get("amount"))
+
     if new_amount < 0:
         flash("Error: Grant amount cannot be negative.", "error")
         return redirect(url_for("hod.hod_grant_allocation"))
     proposal = Proposal.query.get_or_404(proposal_id)
     grant = Grant.query.filter_by(proposal_id=proposal.proposal_id).first()
     user = User.query.get(session["user_id"])
+
     if not grant:
         flash("Error: Grant record not found.", "error")
         return redirect(url_for("hod.hod_grant_allocation"))
     grant.grant_amount = new_amount
+
     if proposal.status == "Pending Grant":
         proposal.status = "Approved"
     db.session.commit()
+
     flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
     send_notification(
         proposal.researcher.user_info.mmu_id,
@@ -251,7 +289,9 @@ def hod_update_grant():
         url_for("researcher.researcher_my_proposals"),
         sender_id=user.mmu_id,
     )
+
     admin = User.query.filter_by(user_role="Admin").first()
+
     if admin:
         msg = f"Action Required: Proposal '{proposal.title}' is fully APPROVED. Please set the Final Deadline."
         link = url_for("admin.admin_view_proposal", proposal_id=proposal.proposal_id)
@@ -261,8 +301,13 @@ def hod_update_grant():
 
 @hod_bp.route("/hod/grant_budget")
 def hod_grant_budget():
+    """
+    Provides an overview of budget utilization for all grants under this HOD.
+    Calculates total funds, allocated amounts, and individual project spending.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
@@ -278,12 +323,15 @@ def hod_grant_budget():
         .join(Researcher)
         .join(User)
     )
+
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
     if filter_faculty:
         query = query.filter(User.faculty == filter_faculty)
+    
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     proposal_data = []
+
     for p in pagination.items:
         spent = (
             db.session.query(func.sum(ProgressReport.financial_usage))
@@ -315,8 +363,13 @@ def hod_grant_budget():
 
 @hod_bp.route("/hod/assigned_research")
 def hod_assigned_research():
+    """
+    Lists ongoing research projects (Approved, Completed, Terminated) assigned to the HOD.
+    Supports pagination and filtering by search query or faculty.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     page = request.args.get("page", 1, type=int)
@@ -335,6 +388,7 @@ def hod_assigned_research():
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
     if filter_faculty:
         query = query.filter(User.faculty == filter_faculty)
+    
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     return render_template(
         "hod_assigned_research.html",
@@ -347,32 +401,46 @@ def hod_assigned_research():
 
 @hod_bp.route("/hod/project/update_status", methods=["POST"])
 def hod_update_project_status():
+    """
+    Updates the status of an ongoing project (e.g., marking it as Completed or Terminated).
+    Ensures the HOD has permission to modify the specific proposal.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     proposal_id = request.form.get("proposal_id")
     new_status = request.form.get("status")
     proposal = Proposal.query.get_or_404(proposal_id)
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
+
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Permission denied.", "error")
         return redirect(url_for("hod.hod_assigned_research"))
+    
     if new_status:
         proposal.status = new_status
         db.session.commit()
         flash(f"Project '{proposal.title}' status updated to {new_status}.", "success")
     next_page = request.form.get("next_page")
+
     if next_page:
         return redirect(next_page)
+    
     return redirect(url_for("hod.hod_assigned_research"))
 
 
 @hod_bp.route("/hod/assigned_research/progress/<int:proposal_id>")
 def hod_view_progress_reports(proposal_id):
+    """
+    Displays the list of progress reports submitted for a specific research project.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Access Denied.", "error")
         return redirect(url_for("hod.hod_assigned_research"))
@@ -381,6 +449,7 @@ def hod_view_progress_reports(proposal_id):
         .order_by(ProgressReport.submission_date.desc())
         .all()
     )
+
     return render_template(
         "hod_view_progress_reports.html", proposal=proposal, reports=reports, user=user
     )
@@ -388,6 +457,11 @@ def hod_view_progress_reports(proposal_id):
 
 @hod_bp.route("/hod/progress_report/decision", methods=["POST"])
 def hod_progress_report_decision():
+    """
+    Handles the HOD's review of a progress report.
+    - Validate: Accepts the report.
+    - Revision: Returns the report to the researcher for changes.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     report_id = request.form.get("report_id")
@@ -395,10 +469,12 @@ def hod_progress_report_decision():
     feedback = request.form.get("feedback")
     report = ProgressReport.query.get_or_404(report_id)
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
+
     if not current_hod or report.proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Access Denied.", "error")
         return redirect(url_for("hod.hod_dashboard"))
     report.hod_feedback = feedback
+
     if decision == "validate":
         report.status = "Validated"
         flash("Progress report validated successfully.", "success")
@@ -408,6 +484,7 @@ def hod_progress_report_decision():
             url_for("researcher.researcher_my_proposals"),
             sender_id=session["user_id"],
         )
+
     elif decision == "revision":
         report.status = "Requires Revision"
         flash("Progress report returned for revision.", "info")
