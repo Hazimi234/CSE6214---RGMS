@@ -7,51 +7,61 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Consistency Styles */
+        /* FULL WIDTH FIXES */
         .content-wrapper-prop {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 25px;
-            padding: 20px;
-            width: 100%;
+            display: block;        /* Changed from grid to block */
+            width: 100%;           /* Forces full width */
+            padding: 20px 40px;    /* Adds side padding for aesthetics */
+            box-sizing: border-box; /* Ensures padding doesn't overflow width */
         }
 
         .stat-card-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 25px;
+            grid-template-columns: repeat(3, 1fr); /* 3 Equal columns */
+            gap: 25px;
+            margin-bottom: 30px;
+            width: 100%;
         }
 
         .lively-card {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
-            gap: 15px;
-            transition: transform 0.2s;
+            gap: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .lively-card:hover { transform: translateY(-3px); }
+        .lively-card:hover { 
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
 
         .timeline-box {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%; /* Ensures timeline fills width */
+            box-sizing: border-box;
         }
 
         .activity-item {
-            padding: 15px;
-            border-left: 3px solid #4caf50;
-            background: #fcfcfc;
-            margin-bottom: 10px;
-            border-radius: 0 5px 5px 0;
+            padding: 15px 20px;
+            border-left: 4px solid #4caf50;
+            background: #f9f9f9;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .activity-item:hover {
+            background: #f1f8e9;
         }
     </style>
 </head>
@@ -66,7 +76,7 @@
                 <li class="active"><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal Submission</a></li>
-                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> My Proposals</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -98,82 +108,103 @@
                 </div>
             </div>
 
-            <div style="margin: 30px;">
-                    <h1 style="color: #1b5e20; margin-bottom: 5px;">Welcome, {{ user.name }}!</h1>
-                    <p style="color: #666; font-size: 1.1rem;">
-                        <span
-                            style="background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
-                            <i class="fas fa-user-shield"></i> Role: Researcher
-                        </span>
-                    </p>
-                </div>
+            <div style="margin: 30px 40px 10px 40px;">
+                <h1 style="color: #1b5e20; margin-bottom: 5px;">Welcome, {{ user.name }}!</h1>
+                <p style="color: #666; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                    <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9rem;">
+                        <i class="fas fa-user-shield"></i> Role: Researcher
+                    </span>
+                </p>
+            </div>
 
-            <div class="content-wrapper-prop" style="display: block;">
+            <div class="content-wrapper-prop">
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
-                <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 25px;">
                     {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                    <div class="alert alert-{{ category }}" style="padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                        {{ message }}
+                    </div>
                     {% endfor %}
                 </div>
                 {% endif %}
                 {% endwith %}
                 
                 <div class="stat-card-row">
-                    <div class="lively-card">
-                        <i class="fas fa-folder-open" style="font-size: 2rem; color: #2e7d32;"></i>
+                    <div class="lively-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('researcher.researcher_my_proposals') }}'">
+                        <i class="fas fa-folder-open" style="font-size: 2.5rem; color: #2e7d32;"></i>
                         <div>
-                            <h3 style="margin: 0;">{{ stats.my_proposals }}</h3>
-                            <small color="#666">Total Proposals</small>
+                                <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.my_proposals }}</h2>
+                                <small style="color: #666; font-size: 0.9rem;">Total Proposals</small>
+                        </div>
+                    </div>
+                    <div class="lively-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('researcher.researcher_my_proposals') }}?status=Draft'">
+                        <i class="fas fa-pencil-alt" style="font-size: 2.5rem; color: #ffa000;"></i>
+                        <div>
+                            <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.drafts }}</h2>
+                            <small style="color: #666; font-size: 0.9rem;">Pending Drafts</small>
                         </div>
                     </div>
                     <div class="lively-card">
-                        <i class="fas fa-hand-holding-usd" style="font-size: 2rem; color: #ffa000;"></i>
-                        <div>
-                            <h3 style="margin: 0;">{{ stats.active_grants }}</h3>
-                            <small color="#666">Active Grants</small>
-                        </div>
-                    </div>
-                    <div class="lively-card">
-                        <svg viewBox="0 0 100 60" style="width: 60px;">
-                            <path d="M 20 50 A 30 30 0 0 1 80 50" fill="none" stroke="#eee" stroke-width="10" />
-                            <path d="M 20 50 A 30 30 0 0 1 80 50" fill="none" stroke="#2e7d32" stroke-width="10" 
-                                  stroke-dasharray="{{ (stats.approved / stats.my_proposals * 94) if stats.my_proposals > 0 else 0 }} 94" />
+                        <svg viewBox="0 0 100 60" style="width: 70px;">
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#eee" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#2e7d32" stroke-width="10" stroke-linecap="round"
+                                  stroke-dasharray="{{ (stats.approved / stats.my_proposals * 126) if stats.my_proposals > 0 else 0 }} 126" />
                         </svg>
                         <div>
-                            <h3 style="margin: 0;">{{ ((stats.approved / stats.my_proposals * 100)|round|int) if stats.my_proposals > 0 else 0 }}%</h3>
-                            <small color="#666">Success Rate</small>
+                            <h2 style="margin: 0; font-size: 2rem; color: #333;">
+                                {{ ((stats.approved / stats.my_proposals * 100)|round|int) if stats.my_proposals > 0 else 0 }}%
+                            </h2>
+                            <small style="color: #666; font-size: 0.9rem;">Success Rate</small>
                         </div>
                     </div>
                 </div>
 
-                <div style="display: grid;">
-                    <div class="timeline-box">
-                        <h3 style="margin-top: 0; color: #1b5e20; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">
-                            <i class="fas fa-stream"></i> Recent Updates
+                <div class="timeline-box" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #1b5e20;">
+                            <i class="fas fa-bullhorn" style="color: #ffa000; margin-right: 10px;"></i> Open Grants
                         </h3>
-                        {% for prop in recent %}
-                        <div class="activity-item">
-                            <div>
-                                <strong style="display: block; color: #333;">{{ prop.title }}</strong>
-                                <small style="color: #888;">{{ prop.submission_date.strftime('%d %b %Y') }}</small>
-                            </div>
-                            <span style="padding: 4px 12px; border-radius: 15px; font-size: 0.75rem; font-weight: bold;
-                                {% if prop.status == 'Approved' %} background: #e8f5e9; color: #2e7d32;
-                                {% elif prop.status == 'Draft' %} background: #e3f2fd; color: #1565c0;
-                                {% else %} background: #fff3e0; color: #ef6c00; {% endif %}">
-                                {{ prop.status }}
-                            </span>
+                        <a href="{{ url_for('researcher.researcher_apply_list') }}" style="font-size: 0.85rem; color: #1565c0; text-decoration: none; font-weight: bold;">
+                            View All <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    {% for cycle in bulletin_cycles %}
+                    <div class="activity-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fcfcfc; border-left: 4px solid #ffa000; margin-bottom: 15px; border-radius: 4px;">
+                        <div>
+                            <strong style="display: block; color: #333; font-size: 1.05rem;">
+                                {{ cycle.cycle_name }}
+                            </strong>
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                <i class="fas fa-university"></i> {{ cycle.faculty }}
+                            </small>
+                            <small style="color: #888;">
+                                <i class="far fa-calendar-alt"></i> Deadline: {{ cycle.end_date.strftime('%d %b %Y') }}
+                            </small>
                         </div>
-                        {% else %}
-                        <p style="text-align: center; color: #999; padding: 20px;">No recent activity found.</p>
-                        {% endfor %}
-                    </div>
+                    
+                        <div style="text-align: right;">
+                            {% set days_left = (cycle.end_date - date.today()).days %}
 
-
-                        
+                            {% if days_left <= 5 %}
+                                <span style="background: #ffebee; color: #c62828; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 5px;">
+                                    <i class="fas fa-fire"></i> {{ days_left }} Days Left
+                                </span>
+                            {% else %}
+                                <span style="background: #e3f2fd; color: #1565c0; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 5px;">
+                                    <i class="far fa-clock"></i> {{ days_left }} Days Left
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
+                    {% else %}
+                    <div style="text-align: center; padding: 40px; color: #999;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p>No open grant cycles at the moment.</p>
+                    </div>
+                    {% endfor %}
                 </div>
 
             </div>

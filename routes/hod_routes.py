@@ -18,6 +18,10 @@ hod_bp = Blueprint("hod", __name__)
 
 @hod_bp.route("/hod/login", methods=["POST", "GET"])
 def hod_login():
+    """
+    Handles the login process for Head of Department (HOD) users.
+    Verifies credentials against the database and establishes a session.
+    """
     if request.method == "POST":
         user = User.query.filter_by(
             mmu_id=request.form["mmu_id"], user_role="HOD"
@@ -33,6 +37,11 @@ def hod_login():
 
 @hod_bp.route("/hod/dashboard")
 def hod_dashboard():
+    """
+    Renders the HOD dashboard.
+    Calculates and displays statistics such as pending proposal approvals
+    and the count of assigned active/completed research projects.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -59,6 +68,10 @@ def hod_dashboard():
 
 @hod_bp.route("/hod/profile", methods=["GET", "POST"])
 def hod_profile():
+    """
+    Allows the HOD to view and update their profile information.
+    Handles password changes and profile picture uploads via utils.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -70,6 +83,10 @@ def hod_profile():
 
 @hod_bp.route("/hod/proposals")
 def hod_assigned_proposals():
+    """
+    Lists proposals assigned to the current HOD that require attention.
+    Filters out proposals that are already approved, completed, or terminated.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
@@ -101,6 +118,9 @@ def hod_assigned_proposals():
 
 @hod_bp.route("/hod/proposals/view/<int:proposal_id>")
 def hod_view_proposal(proposal_id):
+    """
+    Displays the detailed view of a specific proposal for the HOD to review.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal = Proposal.query.get_or_404(proposal_id)
@@ -113,6 +133,11 @@ def hod_view_proposal(proposal_id):
 
 @hod_bp.route("/hod/proposals/decision/<int:proposal_id>", methods=["POST"])
 def hod_proposal_decision(proposal_id):
+    """
+    Processes the HOD's decision to Approve or Reject a proposal.
+    - If Approved: Sets status to 'Pending Grant' and initializes a Grant record.
+    - If Rejected: Sets status to 'Rejected' and notifies the researcher/admin.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
 
@@ -169,27 +194,73 @@ def hod_proposal_decision(proposal_id):
 
 @hod_bp.route("/hod/grant_allocation")
 def hod_grant_allocation():
+    """
+    Displays proposals that have been approved but are awaiting grant amount allocation.
+    Shows the remaining system budget available for allocation.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
-    proposals = Proposal.query.filter(
+    
+    # --- GET FILTERS ---
+    page = request.args.get("page", 1, type=int)
+    search_query = request.args.get("search", "")
+    filter_status = request.args.get("status", "")
+    sort_option = request.args.get("sort", "newest")
+    per_page = 8
+
+    # --- BASE QUERY ---
+    # Only show proposals relevant to Grant Allocation (Pending Grant or Approved)
+    query = Proposal.query.filter(
         Proposal.assigned_hod_id == current_hod.hod_id,
         Proposal.status.in_(["Pending Grant", "Approved"]),
-    ).all()
+    )
+
+    # --- APPLY SEARCH ---
+    if search_query:
+        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+
+    # --- APPLY STATUS FILTER ---
+    if filter_status and filter_status != "all":
+        query = query.filter(Proposal.status == filter_status)
+
+    # --- APPLY SORTING ---
+    if sort_option == "oldest":
+        query = query.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    else:
+        # Default: Newest First
+        query = query.order_by(Proposal.proposal_id.desc())
+
+    # --- EXECUTE PAGINATION ---
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # --- CALCULATE BUDGET TOTALS (Global, not just per page) ---
     total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
     total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
     remaining_balance = total_budget_in - total_grants_out
+
     return render_template(
         "hod_grant_allocation.html",
-        proposals=proposals,
+        proposals=pagination.items, # Pass paginated items
+        pagination=pagination,      # Pass pagination object
         user=user,
         remaining_balance=remaining_balance,
+        # Pass filters back to template
+        current_search=search_query,
+        current_status=filter_status,
+        current_sort=sort_option
     )
-
 
 @hod_bp.route("/hod/grant_allocation/update", methods=["POST"])
 def hod_update_grant():
+    """
+    Updates the allocated grant amount for a specific proposal.
+    Moves the proposal status to 'Approved' if it was 'Pending Grant'.
+    Notifies the researcher and admin upon successful allocation.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal_id = request.form.get("proposal_id")
@@ -224,6 +295,10 @@ def hod_update_grant():
 
 @hod_bp.route("/hod/grant_budget")
 def hod_grant_budget():
+    """
+    Provides an overview of budget utilization for all grants under this HOD.
+    Calculates total funds, allocated amounts, and individual project spending.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -278,6 +353,10 @@ def hod_grant_budget():
 
 @hod_bp.route("/hod/assigned_research")
 def hod_assigned_research():
+    """
+    Lists ongoing research projects (Approved, Completed, Terminated) assigned to the HOD.
+    Supports pagination and filtering by search query or faculty.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
@@ -310,6 +389,10 @@ def hod_assigned_research():
 
 @hod_bp.route("/hod/project/update_status", methods=["POST"])
 def hod_update_project_status():
+    """
+    Updates the status of an ongoing project (e.g., marking it as Completed or Terminated).
+    Ensures the HOD has permission to modify the specific proposal.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal_id = request.form.get("proposal_id")
@@ -331,6 +414,9 @@ def hod_update_project_status():
 
 @hod_bp.route("/hod/assigned_research/progress/<int:proposal_id>")
 def hod_view_progress_reports(proposal_id):
+    """
+    Displays the list of progress reports submitted for a specific research project.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     proposal = Proposal.query.get_or_404(proposal_id)
@@ -351,6 +437,11 @@ def hod_view_progress_reports(proposal_id):
 
 @hod_bp.route("/hod/progress_report/decision", methods=["POST"])
 def hod_progress_report_decision():
+    """
+    Handles the HOD's review of a progress report.
+    - Validate: Accepts the report.
+    - Revision: Returns the report to the researcher for changes.
+    """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
     report_id = request.form.get("report_id")
