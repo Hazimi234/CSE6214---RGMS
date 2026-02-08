@@ -76,7 +76,7 @@
                 <li class="active"><a href="{{ url_for('researcher.researcher_dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
                 <li><a href="{{ url_for('researcher.researcher_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('researcher.researcher_apply_list') }}"><i class="fas fa-file-upload"></i> Proposal Submission</a></li>
-                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> Proposal Status</a></li>
+                <li><a href="{{ url_for('researcher.researcher_my_proposals') }}"><i class="fas fa-chart-line"></i> My Proposals</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -172,11 +172,11 @@
                             <strong style="display: block; color: #333; font-size: 1.05rem;">
                                 {{ activity.proposal.title }}
                             </strong>
-                            
+
                             <small style="color: #888; display: block; margin-top: 5px;">
                                 <i class="far fa-clock"></i> Updated: {{ activity.upload_date.strftime('%d %b %Y, %I:%M %p') }}
                             </small>
-                            
+
                             <small style="color: #666; font-style: italic; font-size: 0.8rem;">
                                 {{ activity.version_note }}
                             </small>
