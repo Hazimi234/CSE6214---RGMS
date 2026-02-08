@@ -265,19 +265,23 @@ def hod_update_grant():
         return redirect(url_for("hod.hod_login"))
     proposal_id = request.form.get("proposal_id")
     new_amount = float(request.form.get("amount"))
+
     if new_amount < 0:
         flash("Error: Grant amount cannot be negative.", "error")
         return redirect(url_for("hod.hod_grant_allocation"))
     proposal = Proposal.query.get_or_404(proposal_id)
     grant = Grant.query.filter_by(proposal_id=proposal.proposal_id).first()
     user = User.query.get(session["user_id"])
+
     if not grant:
         flash("Error: Grant record not found.", "error")
         return redirect(url_for("hod.hod_grant_allocation"))
     grant.grant_amount = new_amount
+
     if proposal.status == "Pending Grant":
         proposal.status = "Approved"
     db.session.commit()
+
     flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
     send_notification(
         proposal.researcher.user_info.mmu_id,
@@ -285,7 +289,9 @@ def hod_update_grant():
         url_for("researcher.researcher_my_proposals"),
         sender_id=user.mmu_id,
     )
+
     admin = User.query.filter_by(user_role="Admin").first()
+
     if admin:
         msg = f"Action Required: Proposal '{proposal.title}' is fully APPROVED. Please set the Final Deadline."
         link = url_for("admin.admin_view_proposal", proposal_id=proposal.proposal_id)
@@ -301,6 +307,7 @@ def hod_grant_budget():
     """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
@@ -316,12 +323,15 @@ def hod_grant_budget():
         .join(Researcher)
         .join(User)
     )
+
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
     if filter_faculty:
         query = query.filter(User.faculty == filter_faculty)
+    
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     proposal_data = []
+
     for p in pagination.items:
         spent = (
             db.session.query(func.sum(ProgressReport.financial_usage))
@@ -359,6 +369,7 @@ def hod_assigned_research():
     """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     page = request.args.get("page", 1, type=int)
@@ -377,6 +388,7 @@ def hod_assigned_research():
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
     if filter_faculty:
         query = query.filter(User.faculty == filter_faculty)
+    
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
     return render_template(
         "hod_assigned_research.html",
@@ -395,20 +407,25 @@ def hod_update_project_status():
     """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     proposal_id = request.form.get("proposal_id")
     new_status = request.form.get("status")
     proposal = Proposal.query.get_or_404(proposal_id)
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
+
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Permission denied.", "error")
         return redirect(url_for("hod.hod_assigned_research"))
+    
     if new_status:
         proposal.status = new_status
         db.session.commit()
         flash(f"Project '{proposal.title}' status updated to {new_status}.", "success")
     next_page = request.form.get("next_page")
+
     if next_page:
         return redirect(next_page)
+    
     return redirect(url_for("hod.hod_assigned_research"))
 
 
@@ -419,9 +436,11 @@ def hod_view_progress_reports(proposal_id):
     """
     if session.get("role") != "HOD":
         return redirect(url_for("hod.hod_login"))
+    
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
+
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Access Denied.", "error")
         return redirect(url_for("hod.hod_assigned_research"))
@@ -430,6 +449,7 @@ def hod_view_progress_reports(proposal_id):
         .order_by(ProgressReport.submission_date.desc())
         .all()
     )
+
     return render_template(
         "hod_view_progress_reports.html", proposal=proposal, reports=reports, user=user
     )
@@ -449,10 +469,12 @@ def hod_progress_report_decision():
     feedback = request.form.get("feedback")
     report = ProgressReport.query.get_or_404(report_id)
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
+
     if not current_hod or report.proposal.assigned_hod_id != current_hod.hod_id:
         flash("Error: Access Denied.", "error")
         return redirect(url_for("hod.hod_dashboard"))
     report.hod_feedback = feedback
+
     if decision == "validate":
         report.status = "Validated"
         flash("Progress report validated successfully.", "success")
@@ -462,6 +484,7 @@ def hod_progress_report_decision():
             url_for("researcher.researcher_my_proposals"),
             sender_id=session["user_id"],
         )
+
     elif decision == "revision":
         report.status = "Requires Revision"
         flash("Progress report returned for revision.", "info")
