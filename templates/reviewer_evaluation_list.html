@@ -16,10 +16,13 @@
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('reviewer.reviewer_dashboard') }}"><i class="fas fa-home"></i>
                         Dashboard</a></li>
-                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
-                <li><a href="{{ url_for('reviewer.reviewer_view_proposals') }}"><i class="fas fa-clipboard-list"></i> Assigned
+                <li><a href="{{ url_for('reviewer.reviewer_profile') }}"><i class="fas fa-user-circle"></i> My
+                        Account</a></li>
+                <li><a href="{{ url_for('reviewer.reviewer_view_proposals') }}"><i class="fas fa-clipboard-list"></i>
+                        Assigned
                         Proposal</a></li>
-                <li class="active"><a href="{{ url_for('reviewer.reviewer_evaluation_list') }}"><i class="fas fa-history"></i>
+                <li class="active"><a href="{{ url_for('reviewer.reviewer_evaluation_list') }}"><i
+                            class="fas fa-history"></i>
                         Review Proposal</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -41,9 +44,7 @@
                         </span>
                         {% endif %}
                     </a>
-
                     <div style="width: 1px; height: 30px; background: #ddd;"></div>
-
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <div style="text-align: right; line-height: 1.3;">
                             <span style="display: block; font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
@@ -60,42 +61,91 @@
 
             <div class="content-wrapper">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div style="margin-bottom: 20px;">
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}" 
-                                    style="padding: 15px; border-radius: 5px; margin-bottom: 10px; 
+                {% if messages %}
+                <div style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}"
+                        style="padding: 15px; border-radius: 5px; margin-bottom: 10px; 
                                             {% if category == 'success' %}background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;
                                             {% elif category == 'error' %}background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
                                             {% elif category == 'warning' %}background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;
                                             {% else %}background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;{% endif %}">
-                                    <i class="fas 
+                        <i class="fas 
                                         {% if category == 'success' %}fa-check-circle
                                         {% elif category == 'error' %}fa-exclamation-circle
                                         {% elif category == 'warning' %}fa-exclamation-triangle
                                         {% else %}fa-info-circle{% endif %}" style="margin-right: 8px;"></i>
-                                    {{ message }}
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
                 {% endwith %}
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
-                    <form method="GET" style="display: flex; gap: 15px; flex: 1; align-items: flex-end;">
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 5px;">Search Title</label>
-                            <input type="text" name="search" value="{{ request.args.get('search', '') }}"
-                                placeholder="e.g. AI Research"
-                                style="width: 97%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+
+                <div
+                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                    <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+
+                        <div style="flex: 2; min-width: 280px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Search
+                                Title</label>
+
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" name="search" value="{{ current_search }}"
+                                    placeholder="e.g. AI Research"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+
+                                {% if current_search or current_area or current_sort != 'newest' %}
+                                <a href="{{ url_for('reviewer.reviewer_evaluation_list') }}" class="btn-outline"
+                                    style="height: 38px; padding: 0 15px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #d32f2f; border-color: #d32f2f; font-weight: bold; background: white; box-sizing: border-box; white-space: nowrap;">
+                                    Clear
+                                </a>
+                                {% endif %}
+                            </div>
                         </div>
-                        <button type="submit" class="btn-primary"
-                            style="width: auto; height: 42px; padding: 0 25px;">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Research
+                                Area</label>
+                            <select name="area"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="">All Areas</option>
+                                {% for area in research_areas %}
+                                <option value="{{ area.name }}" {% if current_area==area.name %}selected{% endif %}>{{
+                                    area.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div style="flex: 1; min-width: 250px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
+                                By</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select name="sort"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                    <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest
+                                        First</option>
+                                    <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest
+                                        First</option>
+                                    <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>
+                                        Title (A-Z)</option>
+                                </select>
+
+                                <button type="submit" class="btn-primary"
+                                    style="height: 38px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
+                        </div>
+
                     </form>
                 </div>
 
-                <h3 style="color: #1b5e20; margin-bottom: 15px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
+                <h3
+                    style="color: #1b5e20; margin-bottom: 15px; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">
                     <i class="fas fa-hourglass-half"></i> Pending Reviews
                 </h3>
 
@@ -120,46 +170,59 @@
                                 <td style="padding: 15px;">{{ prop.research_area }}</td>
 
                                 <td style="padding: 15px; text-align: center;">
-                                    <span style="background: #e3f2fd; color: #1565c0; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
+                                    <span
+                                        style="background: #e3f2fd; color: #1565c0; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
                                         Passed Screening
                                     </span>
                                 </td>
-                                
+
                                 <td style="padding: 15px; text-align: center;">
-                                    <a href="{{ url_for('reviewer.reviewer_evaluate_proposal', proposal_id=prop.proposal_id) }}" 
-                                       class="btn-primary" 
-                                       style="padding: 8px 15px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none;">
+                                    <a href="{{ url_for('reviewer.reviewer_evaluate_proposal', proposal_id=prop.proposal_id) }}"
+                                        class="btn-primary"
+                                        style="padding: 8px 15px; width: auto; font-size: 0.85rem; display: inline-block; margin: 0; text-decoration: none;">
                                         <i class="fas fa-star-half-alt"></i> Evaluate Now
                                     </a>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="7" style="padding: 40px; text-align: center; color: #999;">No proposals ready for evaluation. Check your Assigned Proposals.</td></tr>
+                            <tr>
+                                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">No proposals
+                                    found matching your filters.</td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>
 
                     {% if pagination.pages > 1 %}
-                    <div style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if pagination.has_prev %}
-                            <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.prev_num, search=request.args.get('search', '')) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo; Prev</a>
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.prev_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
                         {% endif %}
-                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-                            {% if page_num %}
-                                {% if page_num == pagination.page %}
-                                    <span class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{ page_num }}</span>
-                                {% else %}
-                                    <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=page_num, search=request.args.get('search', '')) }}" 
-                                       class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num }}</a>
-                                {% endif %}
-                            {% else %}
-                                <span style="padding: 5px;">...</span>
-                            {% endif %}
+
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=page_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
                         {% endfor %}
+
                         {% if pagination.has_next %}
-                            <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.next_num, search=request.args.get('search', '')) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next &raquo;</a>
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.next_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -191,7 +254,8 @@
                                 <td style="padding: 15px; color: #777;">{{ hist.research_area }}</td>
 
                                 <td style="padding: 15px; text-align: center;">
-                                    <span style="font-weight: bold; font-size: 1.1rem; color: {% if hist.review_score >= 75 %}#2e7d32{% else %}#c62828{% endif %};">
+                                    <span
+                                        style="font-weight: bold; font-size: 1.1rem; color: {% if hist.review_score >= 75 %}#2e7d32{% else %}#c62828{% endif %};">
                                         {{ hist.review_score }}
                                     </span>
                                     <span style="font-size: 0.8rem; color: #999;">/100</span>
@@ -199,9 +263,11 @@
 
                                 <td style="padding: 15px; text-align: center;">
                                     {% if hist.review_score >= 75 %}
-                                        <span style="color: #2e7d32; font-weight: bold;"><i class="fas fa-check"></i> Passed</span>
+                                    <span style="color: #2e7d32; font-weight: bold;"><i class="fas fa-check"></i>
+                                        Passed</span>
                                     {% else %}
-                                        <span style="color: #c62828; font-weight: bold;"><i class="fas fa-times"></i> Rejected</span>
+                                    <span style="color: #c62828; font-weight: bold;"><i class="fas fa-times"></i>
+                                        Rejected</span>
                                     {% endif %}
                                 </td>
 
@@ -215,14 +281,50 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="8" style="padding: 30px; text-align: center; color: #999;">No past evaluations found.</td>
+                                <td colspan="7" style="padding: 30px; text-align: center; color: #999;">No past
+                                    evaluations found matching your filters.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+
+                    {% if history_pagination.pages > 1 %}
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                        {% if history_pagination.has_prev %}
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.prev_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
+                        {% endif %}
+
+                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == history_pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=page_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if history_pagination.has_next %}
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.next_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </body>
+
 </html>

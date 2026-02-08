@@ -119,7 +119,7 @@
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                                 <h2 style="color: #1b5e20; margin: 0;">{{ proposal.title }}</h2>
                                 <span style="
-                                    padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;
+                                    padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; white-space: nowrap;
                                     {% if proposal.status in ['Approved', 'Passed Screening'] %}
                                         background:#c8e6c9; color:#2e7d32;
                                     {% elif proposal.status in ['Rejected', 'Failed Screening', 'Terminated'] %}
