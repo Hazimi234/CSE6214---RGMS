@@ -1,6 +1,15 @@
 import json
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
-from models import db, User, Reviewer, Proposal, HOD, ResearchArea, Deadline, Notification
+from models import (
+    db,
+    User,
+    Reviewer,
+    Proposal,
+    HOD,
+    ResearchArea,
+    Deadline,
+    Notification,
+)
 from utils import (
     check_deadlines_and_notify,
     update_user_profile,
@@ -68,87 +77,78 @@ def reviewer_view_proposals():
     if not reviewer_profile:
         flash("Error: Reviewer profile not found.", "error")
         return redirect(url_for("reviewer.reviewer_dashboard"))
-    
-    # --- FILTERS & SORTING ---
+
+    # --- 1. GET PARAMETERS ---
     search_query = request.args.get("search", "")
     filter_area = request.args.get("area", "")
     filter_status = request.args.get("status", "")
     sort_option = request.args.get("sort", "newest")
-
-    query = Proposal.query.filter_by(assigned_reviewer_id=reviewer_profile.reviewer_id)
-
-    # 1. Search
-    if search_query:
-        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
-    
-    # 2. Area Filter
-    if filter_area and filter_area != "all":
-        query = query.filter(Proposal.research_area == filter_area)
-
-    # 3. Status Filter
-    if filter_status and filter_status != "all":
-        query = query.filter(Proposal.status == filter_status)
-
-    # 4. Sorting
-    if sort_option == "oldest":
-        query = query.order_by(Proposal.proposal_id.asc())
-    elif sort_option == "title_asc":
-        query = query.order_by(Proposal.title.asc())
-    elif sort_option == "status_asc":
-        query = query.order_by(Proposal.status.asc())
-    else:
-        # Default: Newest (ID Desc)
-        query = query.order_by(Proposal.proposal_id.desc())
-
-    all_assigned = query.all()
-
-    # Split results into the two categories (Pending vs History)
-    # This ensures filters apply to BOTH tables
-    pending_screening = [
-        p
-        for p in all_assigned
-        if p.status in ["Submitted", "Under Review", "Under Screening"]
-    ]
-    screening_history = [
-        p
-        for p in all_assigned
-        if p.status not in ["Submitted", "Under Review", "Under Screening"]
-    ]
-
-    return render_template(
-        "reviewer_proposals.html",
-        pending_proposals=pending_screening,
-        history_proposals=screening_history,
-        user=user,
-        research_areas=ResearchArea.query.all(),
-        # Pass filters back to template
-        current_search=search_query,
-        current_area=filter_area,
-        current_status=filter_status,
-        current_sort=sort_option
-    # 1. PENDING SCREENING (No pagination, just list all active tasks)
-    pending_proposals = Proposal.query.filter(
-        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-        Proposal.status.in_(["Submitted", "Under Review", "Under Screening"])
-    ).order_by(Proposal.submission_date.desc()).all()
-
-    # 2. SCREENING HISTORY (With Pagination)
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)  # Pagination for History
     per_page = 7
-    
+
+    # --- 2. BASE QUERIES ---
+    # Query A: Pending Screening (Active tasks)
+    pending_query = Proposal.query.filter(
+        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
+        Proposal.status.in_(["Submitted", "Under Review", "Under Screening"]),
+    )
+
+    # Query B: History (Completed/Other tasks)
     history_query = Proposal.query.filter(
         Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-        ~Proposal.status.in_(["Submitted", "Under Review", "Under Screening"]) # NOT IN active statuses
-    ).order_by(Proposal.submission_date.desc())
+        ~Proposal.status.in_(["Submitted", "Under Review", "Under Screening"]),
+    )
 
-    history_pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+    # --- 3. APPLY FILTERS (To BOTH queries) ---
+    if search_query:
+        pending_query = pending_query.filter(Proposal.title.ilike(f"%{search_query}%"))
+        history_query = history_query.filter(Proposal.title.ilike(f"%{search_query}%"))
+
+    if filter_area and filter_area != "all":
+        pending_query = pending_query.filter(Proposal.research_area == filter_area)
+        history_query = history_query.filter(Proposal.research_area == filter_area)
+
+    if filter_status and filter_status != "all":
+        # Note: This might filter out everything from one list depending on status
+        pending_query = pending_query.filter(Proposal.status == filter_status)
+        history_query = history_query.filter(Proposal.status == filter_status)
+
+    # --- 4. APPLY SORTING ---
+    if sort_option == "oldest":
+        pending_query = pending_query.order_by(Proposal.proposal_id.asc())
+        history_query = history_query.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        pending_query = pending_query.order_by(Proposal.title.asc())
+        history_query = history_query.order_by(Proposal.title.asc())
+    elif sort_option == "status_asc":
+        pending_query = pending_query.order_by(Proposal.status.asc())
+        history_query = history_query.order_by(Proposal.status.asc())
+    else:
+        # Default: Newest (ID Desc)
+        pending_query = pending_query.order_by(Proposal.proposal_id.desc())
+        history_query = history_query.order_by(Proposal.proposal_id.desc())
+
+    # --- 5. EXECUTE QUERIES ---
+    # Pending is usually small, so we fetch all
+    pending_proposals = pending_query.all()
+
+    # History can be large, so we paginate
+    history_pagination = history_query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
     return render_template(
         "reviewer_proposals.html",
         pending_proposals=pending_proposals,
-        history_proposals=history_pagination.items,
-        history_pagination=history_pagination,
-        user=user
+        history_proposals=history_pagination.items,  # Pass items for loop
+        history_pagination=history_pagination,  # Pass object for page links
+        user=user,
+        research_areas=ResearchArea.query.all(),
+        # Pass filters back to keep state
+        current_search=search_query,
+        current_area=filter_area,
+        current_status=filter_status,
+        current_sort=sort_option,
     )
 
 
@@ -232,9 +232,11 @@ def reviewer_evaluation_list():
         return redirect(url_for("reviewer.reviewer_login"))
     user = User.query.get(session["user_id"])
     reviewer_profile = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
-    
-    # --- GET FILTERS ---
-    page = request.args.get("page", 1, type=int)
+
+    # --- GET FILTERS & PAGINATION ---
+    page = request.args.get("page", 1, type=int)  # For Pending
+    history_page = request.args.get("history_page", 1, type=int)  # For History
+
     search_query = request.args.get("search", "")
     filter_area = request.args.get("area", "")
     sort_option = request.args.get("sort", "newest")
@@ -253,12 +255,11 @@ def reviewer_evaluation_list():
         Proposal.review_score != None,
     )
 
-    # --- APPLY SEARCH ---
+    # --- APPLY FILTERS ---
     if search_query:
         query_pending = query_pending.filter(Proposal.title.ilike(f"%{search_query}%"))
         query_history = query_history.filter(Proposal.title.ilike(f"%{search_query}%"))
 
-    # --- APPLY AREA FILTER ---
     if filter_area and filter_area != "all":
         query_pending = query_pending.filter(Proposal.research_area == filter_area)
         query_history = query_history.filter(Proposal.research_area == filter_area)
@@ -275,26 +276,13 @@ def reviewer_evaluation_list():
         query_pending = query_pending.order_by(Proposal.proposal_id.desc())
         query_history = query_history.order_by(Proposal.proposal_id.desc())
 
-    # --- EXECUTE ---
+    # --- EXECUTE PAGINATION ---
+    # Paginate BOTH lists independently
     pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
-    history_proposals = query_history.all()
+    history_pagination = query_history.paginate(
+        page=history_page, per_page=8, error_out=False
+    )
 
-    
-    if search:
-        query_pending = query_pending.filter(Proposal.title.ilike(f"%{search}%"))
-        
-    pagination = query_pending.paginate(page=page, per_page=8, error_out=False)
-    
-    # 2. COMPLETED HISTORY (Uses 'history_page' parameter)
-    history_page = request.args.get('history_page', 1, type=int)
-    
-    query_history = Proposal.query.filter(
-        Proposal.assigned_reviewer_id == reviewer_profile.reviewer_id,
-        Proposal.review_score != None,
-    ).order_by(Proposal.submission_date.desc())
-    
-    history_pagination = query_history.paginate(page=history_page, per_page=7, error_out=False)
-    
     return render_template(
         "reviewer_evaluation_list.html",
         proposals=pagination.items,
@@ -306,7 +294,7 @@ def reviewer_evaluation_list():
         # Pass filters back to template
         current_search=search_query,
         current_area=filter_area,
-        current_sort=sort_option
+        current_sort=sort_option,
     )
 
 
@@ -314,16 +302,15 @@ def reviewer_evaluation_list():
 def reviewer_evaluate_proposal(proposal_id):
     if session.get("role") != "Reviewer":
         return redirect(url_for("reviewer.reviewer_login"))
-    
+
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
 
     # --- 1. GET DEADLINE & CHECK OVERDUE ---
     deadline_obj = Deadline.query.filter_by(
-        proposal_id=proposal_id, 
-        deadline_type="Reviewer"
+        proposal_id=proposal_id, deadline_type="Reviewer"
     ).first()
-    
+
     is_overdue = False
     if deadline_obj and deadline_obj.due_date:
         if date.today() > deadline_obj.due_date:
@@ -331,33 +318,33 @@ def reviewer_evaluate_proposal(proposal_id):
 
     # --- 2. CHECK STATUS & ACCESS ---
     readonly = False
-    
+
     # Case A: Passed Screening (Pending Review)
     if proposal.status == "Passed Screening":
         if is_overdue:
-            readonly = True # Lock it if overdue
+            readonly = True  # Lock it if overdue
         else:
-            readonly = False # Editable if within deadline
-    
+            readonly = False  # Editable if within deadline
+
     # Case B: Already Reviewed (History)
     elif proposal.review_score is not None:
         readonly = True
-        is_overdue = False # Don't show overdue warning for completed tasks
-        
+        is_overdue = False  # Don't show overdue warning for completed tasks
+
     else:
         flash(
             f"Error: This proposal cannot be evaluated. Current status: {proposal.status}",
             "error",
         )
         return redirect(url_for("reviewer.reviewer_view_proposals"))
-    
+
     saved_answers = {}
     if proposal.review_draft:
         try:
             saved_answers = json.loads(proposal.review_draft)
         except:
             saved_answers = {}
-            
+
     if request.method == "POST":
         action = request.form.get("action")
 
@@ -366,21 +353,27 @@ def reviewer_evaluate_proposal(proposal_id):
             admin = User.query.filter_by(user_role="Admin").first()
             if admin:
                 msg = f"Extension Request: Reviewer {user.name} requests more time for '{proposal.title}'."
-                link = url_for('admin.admin_view_proposal', proposal_id=proposal.proposal_id)
+                link = url_for(
+                    "admin.admin_view_proposal", proposal_id=proposal.proposal_id
+                )
                 send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
-            
+
             flash("Extension request sent to Admin.", "info")
             return redirect(url_for("reviewer.reviewer_evaluation_list"))
 
         # --- NEW ACTION: RETURN TASK (Due to timeout) ---
         elif action == "return_task":
             proposal.status = "Return for Reassignment"
-            proposal.assigned_reviewer_id = None # Optional: Clear assignment immediately
-            
+            proposal.assigned_reviewer_id = (
+                None  # Optional: Clear assignment immediately
+            )
+
             admin = User.query.filter_by(user_role="Admin").first()
             if admin:
                 msg = f"Task Returned: Reviewer {user.name} missed deadline for '{proposal.title}'."
-                link = url_for('admin.admin_view_proposal', proposal_id=proposal.proposal_id)
+                link = url_for(
+                    "admin.admin_view_proposal", proposal_id=proposal.proposal_id
+                )
                 send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
 
             db.session.commit()
@@ -390,7 +383,9 @@ def reviewer_evaluate_proposal(proposal_id):
         # Normal Submit Logic (Only if NOT Overdue)
         if is_overdue:
             flash("Deadline passed. You cannot save or submit.", "error")
-            return redirect(url_for("reviewer.reviewer_evaluate_proposal", proposal_id=proposal_id))
+            return redirect(
+                url_for("reviewer.reviewer_evaluate_proposal", proposal_id=proposal_id)
+            )
 
         # 1. COLLECT FORM DATA
         data = {}
@@ -403,10 +398,10 @@ def reviewer_evaluate_proposal(proposal_id):
                 total_score += int(val)
             else:
                 all_answered = False
-        
+
         feedback = request.form.get("feedback")
         data["feedback"] = feedback
-        
+
         if action == "save_draft":
             proposal.review_draft = json.dumps(data)
             db.session.commit()
@@ -422,11 +417,11 @@ def reviewer_evaluate_proposal(proposal_id):
                         "reviewer.reviewer_evaluate_proposal", proposal_id=proposal_id
                     )
                 )
-            
+
             proposal.review_score = total_score
             proposal.review_feedback = feedback
             proposal.review_draft = json.dumps(data)
-            
+
             if total_score >= 75:
                 proposal.status = "Pending HOD Approval"
                 flash(
@@ -435,14 +430,14 @@ def reviewer_evaluate_proposal(proposal_id):
                 )
                 if proposal.assigned_hod_id and proposal.researcher:
                     hod = HOD.query.get(proposal.assigned_hod_id)
-                    researcher=Researcher.query.get(proposal.researcher_id)
-                    if hod: # Notify HOD
+                    researcher = Researcher.query.get(proposal.researcher_id)
+                    if hod:  # Notify HOD
                         msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
                         link = url_for("hod.hod_dashboard")
                         send_notification(
                             hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
                         )
-                    if researcher: # Notify Researcher
+                    if researcher:  # Notify Researcher
                         msg = f"Update: Your proposal '{proposal.title}' passed review ({total_score}/100) and is pending HOD approval."
                         link = url_for("researcher.researcher_my_proposals")
                         send_notification(
@@ -467,12 +462,12 @@ def reviewer_evaluate_proposal(proposal_id):
                 )
             db.session.commit()
             return redirect(url_for("reviewer.reviewer_evaluation_list"))
-            
+
     return render_template(
         "reviewer_evaluate_proposal.html",
         proposal=proposal,
         user=user,
         saved_answers=saved_answers,
         readonly=readonly,
-        is_overdue=is_overdue
+        is_overdue=is_overdue,
     )

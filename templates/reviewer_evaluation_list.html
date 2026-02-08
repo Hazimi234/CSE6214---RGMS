@@ -103,13 +103,6 @@
                                 </a>
                                 {% endif %}
                             </div>
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
-                    <form method="GET" style="display: flex; gap: 15px; flex: 1; align-items: flex-end;">
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; font-size: 0.9rem; display: block; margin-bottom: 5px;">Search Title</label>
-                            <input type="text" name="search" value="{{ request.args.get('search', '') }}"
-                                placeholder="e.g. AI Research"
-                                style="width: 97%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
                         </div>
 
                         <div style="flex: 1; min-width: 150px;">
@@ -175,12 +168,14 @@
                                 <td style="padding: 15px; font-weight: bold;">{{ prop.title }}</td>
                                 <td style="padding: 15px;">{{ prop.researcher.user_info.name }}</td>
                                 <td style="padding: 15px;">{{ prop.research_area }}</td>
+
                                 <td style="padding: 15px; text-align: center;">
                                     <span
                                         style="background: #e3f2fd; color: #1565c0; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;">
                                         Passed Screening
                                     </span>
                                 </td>
+
                                 <td style="padding: 15px; text-align: center;">
                                     <a href="{{ url_for('reviewer.reviewer_evaluate_proposal', proposal_id=prop.proposal_id) }}"
                                         class="btn-primary"
@@ -191,7 +186,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" style="padding: 40px; text-align: center; color: #999;">No proposals
+                                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">No proposals
                                     found matching your filters.</td>
                             </tr>
                             {% endfor %}
@@ -202,10 +197,11 @@
                     <div
                         style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if pagination.has_prev %}
-                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.prev_num, search=current_search, area=current_area, sort=current_sort) }}"
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.prev_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
                             Prev</a>
                         {% endif %}
+
                         {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
                         right_current=1) %}
                         {% if page_num %}
@@ -214,7 +210,7 @@
                             style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
                             page_num }}</span>
                         {% else %}
-                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=page_num, search=current_search, area=current_area, sort=current_sort) }}"
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=page_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
                             }}</a>
                         {% endif %}
@@ -222,8 +218,9 @@
                         <span style="padding: 5px;">...</span>
                         {% endif %}
                         {% endfor %}
+
                         {% if pagination.has_next %}
-                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.next_num, search=current_search, area=current_area, sort=current_sort) }}"
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', page=pagination.next_num, history_page=history_pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
                             &raquo;</a>
                         {% endif %}
@@ -255,6 +252,7 @@
                                 <td style="padding: 15px; font-weight: bold; color: #777;">{{ hist.title }}</td>
                                 <td style="padding: 15px; color: #777;">{{ hist.researcher.user_info.name }}</td>
                                 <td style="padding: 15px; color: #777;">{{ hist.research_area }}</td>
+
                                 <td style="padding: 15px; text-align: center;">
                                     <span
                                         style="font-weight: bold; font-size: 1.1rem; color: {% if hist.review_score >= 75 %}#2e7d32{% else %}#c62828{% endif %};">
@@ -262,6 +260,7 @@
                                     </span>
                                     <span style="font-size: 0.8rem; color: #999;">/100</span>
                                 </td>
+
                                 <td style="padding: 15px; text-align: center;">
                                     {% if hist.review_score >= 75 %}
                                     <span style="color: #2e7d32; font-weight: bold;"><i class="fas fa-check"></i>
@@ -271,6 +270,7 @@
                                         Rejected</span>
                                     {% endif %}
                                 </td>
+
                                 <td style="padding: 15px; text-align: center;">
                                     <a href="{{ url_for('reviewer.reviewer_evaluate_proposal', proposal_id=hist.proposal_id) }}"
                                         class="btn-outline"
@@ -281,35 +281,43 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" style="padding: 30px; text-align: center; color: #999;">No past evaluations found.</td>
+                                <td colspan="7" style="padding: 30px; text-align: center; color: #999;">No past
+                                    evaluations found matching your filters.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
 
                     {% if history_pagination.pages > 1 %}
-                    <div style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if history_pagination.has_prev %}
-                            <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.prev_num, page=pagination.page, search=request.args.get('search', '')) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo; Prev</a>
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.prev_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
                         {% endif %}
 
-                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-                            {% if page_num %}
-                                {% if page_num == history_pagination.page %}
-                                    <span class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{ page_num }}</span>
-                                {% else %}
-                                    <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=page_num, page=pagination.page, search=request.args.get('search', '')) }}" 
-                                       class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num }}</a>
-                                {% endif %}
-                            {% else %}
-                                <span style="padding: 5px;">...</span>
-                            {% endif %}
+                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == history_pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=page_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
                         {% endfor %}
 
                         {% if history_pagination.has_next %}
-                            <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.next_num, page=pagination.page, search=request.args.get('search', '')) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next &raquo;</a>
+                        <a href="{{ url_for('reviewer.reviewer_evaluation_list', history_page=history_pagination.next_num, page=pagination.page, search=current_search, area=current_area, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
                         {% endif %}
                     </div>
                     {% endif %}

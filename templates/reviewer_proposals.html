@@ -89,7 +89,6 @@
                             <label
                                 style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Search
                                 Title</label>
-
                             <div style="display: flex; gap: 5px;">
                                 <input type="text" name="search" value="{{ current_search }}"
                                     placeholder="e.g. AI Research"
@@ -141,28 +140,28 @@
                             </select>
                         </div>
 
-                        <div style="flex: 1; min-width: 150px;">
+                        <div style="flex: 1; min-width: 250px;">
                             <label
                                 style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
                                 By</label>
-                            <select name="sort"
-                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
-                                <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest First
-                                </option>
-                                <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest First
-                                </option>
-                                <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>Title
-                                    (A-Z)</option>
-                                <option value="status_asc" {% if current_sort=='status_asc' %}selected{% endif %}>Status
-                                    (A-Z)</option>
-                            </select>
-                        </div>
+                            <div style="display: flex; gap: 10px;">
+                                <select name="sort"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                    <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest
+                                        First</option>
+                                    <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest
+                                        First</option>
+                                    <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>
+                                        Title (A-Z)</option>
+                                    <option value="status_asc" {% if current_sort=='status_asc' %}selected{% endif %}>
+                                        Status (A-Z)</option>
+                                </select>
 
-                        <div style="display: flex; align-items: center; height: 38px;">
-                            <button type="submit" class="btn-primary"
-                                style="height: 100%; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
+                                <button type="submit" class="btn-primary"
+                                    style="height: 38px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
                         </div>
 
                     </form>
@@ -279,38 +278,45 @@
                             </tr>
                             {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
-                                        No history available.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                                    No history available.
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
 
                     {% if history_pagination.pages > 1 %}
-                    <div style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if history_pagination.has_prev %}
-                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.prev_num) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo; Prev</a>
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.prev_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
                         {% endif %}
 
-                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
-                            {% if page_num %}
-                                {% if page_num == history_pagination.page %}
-                                    <span class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{ page_num }}</span>
-                                {% else %}
-                                    <a href="{{ url_for('reviewer.reviewer_view_proposals', page=page_num) }}" 
-                                       class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num }}</a>
-                                {% endif %}
-                            {% else %}
-                                <span style="padding: 5px;">...</span>
-                            {% endif %}
+                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == history_pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=page_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
                         {% endfor %}
 
                         {% if history_pagination.has_next %}
-                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.next_num) }}" 
-                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next &raquo;</a>
+                        <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.next_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
                         {% endif %}
                     </div>
                     {% endif %}
