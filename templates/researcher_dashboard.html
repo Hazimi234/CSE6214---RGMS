@@ -132,18 +132,18 @@
                 {% endwith %}
                 
                 <div class="stat-card-row">
-                    <div class="lively-card">
+                    <div class="lively-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('researcher.researcher_my_proposals') }}'">
                         <i class="fas fa-folder-open" style="font-size: 2.5rem; color: #2e7d32;"></i>
                         <div>
-                            <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.my_proposals }}</h2>
-                            <small style="color: #666; font-size: 0.9rem;">Total Proposals</small>
+                                <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.my_proposals }}</h2>
+                                <small style="color: #666; font-size: 0.9rem;">Total Proposals</small>
                         </div>
                     </div>
-                    <div class="lively-card">
-                        <i class="fas fa-hand-holding-usd" style="font-size: 2.5rem; color: #ffa000;"></i>
+                    <div class="lively-card" style="cursor: pointer;" onclick="window.location.href='{{ url_for('researcher.researcher_my_proposals') }}?status=Draft'">
+                        <i class="fas fa-pencil-alt" style="font-size: 2.5rem; color: #ffa000;"></i>
                         <div>
-                            <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.active_grants }}</h2>
-                            <small style="color: #666; font-size: 0.9rem;">Active Grants</small>
+                            <h2 style="margin: 0; font-size: 2rem; color: #333;">{{ stats.drafts }}</h2>
+                            <small style="color: #666; font-size: 0.9rem;">Pending Drafts</small>
                         </div>
                     </div>
                     <div class="lively-card">
@@ -161,39 +161,48 @@
                     </div>
                 </div>
 
-                <div class="timeline-box">
-                    <h3 style="margin-top: 0; color: #1b5e20; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px;">
-                        <i class="fas fa-stream"></i> Recent Updates
-                    </h3>
-                    
-                    {% for activity in recent_activity %}
-                    <div class="activity-item">
+                <div class="timeline-box" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #1b5e20;">
+                            <i class="fas fa-bullhorn" style="color: #ffa000; margin-right: 10px;"></i> Open Grants
+                        </h3>
+                        <a href="{{ url_for('researcher.researcher_apply_list') }}" style="font-size: 0.85rem; color: #1565c0; text-decoration: none; font-weight: bold;">
+                            View All <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    {% for cycle in bulletin_cycles %}
+                    <div class="activity-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fcfcfc; border-left: 4px solid #ffa000; margin-bottom: 15px; border-radius: 4px;">
                         <div>
                             <strong style="display: block; color: #333; font-size: 1.05rem;">
-                                {{ activity.proposal.title }}
+                                {{ cycle.cycle_name }}
                             </strong>
-
-                            <small style="color: #888; display: block; margin-top: 5px;">
-                                <i class="far fa-clock"></i> Updated: {{ activity.upload_date.strftime('%d %b %Y, %I:%M %p') }}
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                <i class="fas fa-university"></i> {{ cycle.faculty }}
                             </small>
-
-                            <small style="color: #666; font-style: italic; font-size: 0.8rem;">
-                                {{ activity.version_note }}
+                            <small style="color: #888;">
+                                <i class="far fa-calendar-alt"></i> Deadline: {{ cycle.end_date.strftime('%d %b %Y') }}
                             </small>
                         </div>
                     
-                        <span style="padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold;
-                            {% if activity.proposal.status == 'Approved' %} background: #e8f5e9; color: #2e7d32;
-                            {% elif activity.proposal.status == 'Draft' %} background: #e3f2fd; color: #1565c0;
-                            {% elif activity.proposal.status == 'Rejected' %} background: #ffebee; color: #c62828;
-                            {% else %} background: #fff3e0; color: #ef6c00; {% endif %}">
-                            {{ activity.proposal.status }}
-                        </span>
+                        <div style="text-align: right;">
+                            {% set days_left = (cycle.end_date - date.today()).days %}
+
+                            {% if days_left <= 5 %}
+                                <span style="background: #ffebee; color: #c62828; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 5px;">
+                                    <i class="fas fa-fire"></i> {{ days_left }} Days Left
+                                </span>
+                            {% else %}
+                                <span style="background: #e3f2fd; color: #1565c0; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; display: block; margin-bottom: 5px;">
+                                    <i class="far fa-clock"></i> {{ days_left }} Days Left
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
                     {% else %}
                     <div style="text-align: center; padding: 40px; color: #999;">
-                        <i class="fas fa-clipboard-list" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
-                        <p>No recent activity found.</p>
+                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p>No open grant cycles at the moment.</p>
                     </div>
                     {% endfor %}
                 </div>

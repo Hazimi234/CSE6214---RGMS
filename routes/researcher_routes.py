@@ -1,3 +1,4 @@
+from datetime import datetime, date
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from models import (
     db,
@@ -56,29 +57,34 @@ def researcher_dashboard():
     stats = {
         "my_proposals": Proposal.query.filter_by(
             researcher_id=researcher.researcher_id
-        ).count(),
+            ).count(),
         "approved": approved_count,
         "active_grants": Grant.query.join(Proposal)
-        .filter(Proposal.researcher_id == researcher.researcher_id)
-        .count(),
+            .filter(Proposal.researcher_id == researcher.researcher_id)
+            .count(),
         "unread_notifs": Notification.query.filter_by(
             recipient_id=user.mmu_id, is_read=False
-        ).count(),
+            ).count(),
+        "drafts": Proposal.query.filter_by(
+            researcher_id=researcher.researcher_id, status="Draft"
+            ).count(),
     }
 
-    recent_proposals = (
-        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
-        .order_by(Proposal.submission_date.desc())
-        .limit(3)
-        .all()
-    )
+    current_date=get_myt_date()
+    bulletin_cycles=GrantCycle.query.filter(
+        GrantCycle.is_open == True, 
+        GrantCycle.end_date >= current_date
+    ).order_by(GrantCycle.end_date.asc()).limit(5).all()
+    
     return render_template(
         "researcher_dashboard.html",
         stats=stats,
         user=user,
         researcher=researcher,
-        recent_proposals=recent_proposals,
+        bulletin_cycles=bulletin_cycles,
+        date=date,
     )
+
 
 
 @researcher_bp.route("/researcher/profile", methods=["GET", "POST"])
