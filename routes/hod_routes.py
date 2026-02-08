@@ -202,20 +202,57 @@ def hod_grant_allocation():
         return redirect(url_for("hod.hod_login"))
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
-    proposals = Proposal.query.filter(
+    
+    # --- GET FILTERS ---
+    page = request.args.get("page", 1, type=int)
+    search_query = request.args.get("search", "")
+    filter_status = request.args.get("status", "")
+    sort_option = request.args.get("sort", "newest")
+    per_page = 8
+
+    # --- BASE QUERY ---
+    # Only show proposals relevant to Grant Allocation (Pending Grant or Approved)
+    query = Proposal.query.filter(
         Proposal.assigned_hod_id == current_hod.hod_id,
         Proposal.status.in_(["Pending Grant", "Approved"]),
-    ).all()
+    )
+
+    # --- APPLY SEARCH ---
+    if search_query:
+        query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
+
+    # --- APPLY STATUS FILTER ---
+    if filter_status and filter_status != "all":
+        query = query.filter(Proposal.status == filter_status)
+
+    # --- APPLY SORTING ---
+    if sort_option == "oldest":
+        query = query.order_by(Proposal.proposal_id.asc())
+    elif sort_option == "title_asc":
+        query = query.order_by(Proposal.title.asc())
+    else:
+        # Default: Newest First
+        query = query.order_by(Proposal.proposal_id.desc())
+
+    # --- EXECUTE PAGINATION ---
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # --- CALCULATE BUDGET TOTALS (Global, not just per page) ---
     total_budget_in = db.session.query(func.sum(Budget.amount)).scalar() or 0.0
     total_grants_out = db.session.query(func.sum(Grant.grant_amount)).scalar() or 0.0
     remaining_balance = total_budget_in - total_grants_out
+
     return render_template(
         "hod_grant_allocation.html",
-        proposals=proposals,
+        proposals=pagination.items, # Pass paginated items
+        pagination=pagination,      # Pass pagination object
         user=user,
         remaining_balance=remaining_balance,
+        # Pass filters back to template
+        current_search=search_query,
+        current_status=filter_status,
+        current_sort=sort_option
     )
-
 
 @hod_bp.route("/hod/grant_allocation/update", methods=["POST"])
 def hod_update_grant():

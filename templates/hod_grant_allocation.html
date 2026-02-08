@@ -18,9 +18,12 @@
                 <li><a href="{{ url_for('hod.hod_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('hod.hod_assigned_proposals') }}"><i class="fas fa-thumbs-up"></i>
                         Assigned Proposals</a></li>
-                <li class="active"><a href="{{ url_for('hod.hod_grant_allocation') }}"><i class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
-                <li><a href="{{ url_for('hod.hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a></li>
-                <li><a href="{{ url_for('hod.hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned Research</a></li>
+                <li class="active"><a href="{{ url_for('hod.hod_grant_allocation') }}"><i
+                            class="fas fa-money-check-alt"></i> Grant Allocation</a></li>
+                <li><a href="{{ url_for('hod.hod_grant_budget') }}"><i class="fas fa-chart-pie"></i> Grant Budget</a>
+                </li>
+                <li><a href="{{ url_for('hod.hod_assigned_research') }}"><i class="fas fa-chart-pie"></i> Assigned
+                        Research</a></li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -59,7 +62,8 @@
                     message }}</div>{% endfor %}{% endif %}
                 {% endwith %}
 
-                <div class="stat-card" style="margin-bottom: 30px; background: #e8f5e9; border-left: 5px solid #2e7d32;">
+                <div class="stat-card"
+                    style="margin-bottom: 30px; background: #e8f5e9; border-left: 5px solid #2e7d32;">
                     <div class="stat-info">
                         <h3 style="font-size: 1.5rem;">RM {{ "{:,.2f}".format(remaining_balance) }}</h3>
                         <p>Remaining System Budget Available</p>
@@ -67,21 +71,86 @@
                     <div class="stat-icon"><i class="fas fa-wallet" style="color: #2e7d32;"></i></div>
                 </div>
 
+                <div
+                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                    <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+
+                        <div style="flex: 2; min-width: 280px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Search
+                                Title</label>
+
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" name="search" value="{{ current_search }}"
+                                    placeholder="e.g. Research Title"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+
+                                {% if current_search or current_status or current_sort != 'newest' %}
+                                <a href="{{ url_for('hod.hod_grant_allocation') }}" class="btn-outline"
+                                    style="height: 38px; padding: 0 15px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #d32f2f; border-color: #d32f2f; font-weight: bold; background: white; box-sizing: border-box; white-space: nowrap;">
+                                    Clear
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Status</label>
+                            <select name="status"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="" {% if not current_status %}selected{% endif %}>All Statuses</option>
+                                <option value="Pending Grant" {% if current_status=='Pending Grant' %}selected{% endif
+                                    %}>Pending Grant</option>
+                                <option value="Approved" {% if current_status=='Approved' %}selected{% endif %}>Approved
+                                </option>
+                            </select>
+                        </div>
+
+                        <div style="flex: 1; min-width: 250px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
+                                By</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select name="sort"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                    <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest
+                                        First</option>
+                                    <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest
+                                        First</option>
+                                    <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>
+                                        Title (A-Z)</option>
+                                </select>
+
+                                <button type="submit" class="btn-primary"
+                                    style="height: 38px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
+                                    <i class="fas fa-filter"></i> Filter
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
                 <div class="table-card">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background-color: #f8f9fa; text-align: left;">
+                                <th style="padding: 15px; width:5%; border-bottom: 2px solid #eee;">ID</th>
                                 <th style="padding: 15px; width:30%; border-bottom: 2px solid #eee;">Proposal Title</th>
                                 <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Researcher</th>
                                 <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Requested</th>
                                 <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Allocated</th>
-                                <th style="padding: 15px; width:15%; border-bottom: 2px solid #eee;">Status</th>
+                                <th style="padding: 15px; width:10%; border-bottom: 2px solid #eee;">Status</th>
                                 <th style="padding: 15px; width:10%; border-bottom: 2px solid #eee;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for proposal in proposals %}
                             <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 15px; color: #888; font-weight: bold;">#{{ proposal.proposal_id }}
+                                </td>
+
                                 <td style="padding: 15px; font-weight: 500;">{{ proposal.title }}</td>
                                 <td style="padding: 15px;">{{ proposal.researcher.user_info.name }}</td>
                                 <td style="padding: 15px;">RM {{ "{:,.2f}".format(proposal.requested_budget) }}</td>
@@ -93,54 +162,96 @@
                                     {% endif %}
                                 </td>
                                 <td style="padding: 15px;">
-                                    <span style="padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold;
+                                    <span
+                                        style="padding: 4px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold;
                                         background: {% if proposal.status == 'Approved' %}#c8e6c9{% else %}#fff9c4{% endif %};
                                         color: {% if proposal.status == 'Approved' %}#2e7d32{% else %}#fbc02d{% endif %};">
                                         {{ proposal.status }}
                                     </span>
                                 </td>
                                 <td style="padding: 15px;">
-                                    <button class="btn-sm" onclick="openAllocationModal('{{ proposal.proposal_id }}', '{{ proposal.grant_award.grant_amount if proposal.grant_award else 0 }}', '{{ remaining_balance }}')">
-                                        <i class="fas fa-edit"></i> {% if proposal.status == 'Pending Grant' %}Allocate{% else %}Edit{% endif %}
+                                    <button class="btn-sm"
+                                        onclick="openAllocationModal('{{ proposal.proposal_id }}', '{{ proposal.grant_award.grant_amount if proposal.grant_award else 0 }}', '{{ remaining_balance }}')">
+                                        <i class="fas fa-edit"></i> {% if proposal.status == 'Pending Grant'
+                                        %}Allocate{% else %}Edit{% endif %}
                                     </button>
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="6" style="padding: 30px; text-align: center; color: #888;">No pending grant allocations found.</td>
+                                <td colspan="7" style="padding: 30px; text-align: center; color: #888;">No pending grant
+                                    allocations found matching your filters.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+
+                    {% if pagination.pages > 1 %}
+                    <div
+                        style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                        {% if pagination.has_prev %}
+                        <a href="{{ url_for('hod.hod_grant_allocation', page=pagination.prev_num, search=current_search, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
+                            Prev</a>
+                        {% endif %}
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1,
+                        right_current=1) %}
+                        {% if page_num %}
+                        {% if page_num == pagination.page %}
+                        <span class="btn-primary"
+                            style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
+                            page_num }}</span>
+                        {% else %}
+                        <a href="{{ url_for('hod.hod_grant_allocation', page=page_num, search=current_search, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
+                            }}</a>
+                        {% endif %}
+                        {% else %}
+                        <span style="padding: 5px;">...</span>
+                        {% endif %}
+                        {% endfor %}
+                        {% if pagination.has_next %}
+                        <a href="{{ url_for('hod.hod_grant_allocation', page=pagination.next_num, search=current_search, status=current_status, sort=current_sort) }}"
+                            class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
+                            &raquo;</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Allocation Modal -->
     <div id="allocationModal" class="modal">
         <div class="modal-content" style="text-align: left;">
             <h3 style="color: #1b5e20; margin-top: 0; text-align: center;">Allocate Grant Funds</h3>
-            <p style="text-align: center; color: #666; margin-bottom: 20px;">Enter the final approved amount for this proposal.</p>
-            
+            <p style="text-align: center; color: #666; margin-bottom: 20px;">Enter the final approved amount for this
+                proposal.</p>
+
             <form action="{{ url_for('hod.hod_update_grant') }}" method="POST">
                 <input type="hidden" name="proposal_id" id="modalProposalId">
-                
+
                 <div class="form-group">
                     <label>Grant Amount (RM)</label>
-                    <input type="number" name="amount" id="modalAmount" step="0.01" required style="font-size: 1.2rem; font-weight: bold; color: #2e7d32;">
+                    <input type="number" name="amount" id="modalAmount" step="0.01" required
+                        style="font-size: 1.2rem; font-weight: bold; color: #2e7d32;">
                     <small id="budgetError" style="color: #c62828; display: none; font-weight: bold; margin-top: 5px;">
                         <i class="fas fa-exclamation-circle"></i> Amount exceeds available system budget!
                     </small>
-                    <small id="negativeError" style="color: #c62828; display: none; font-weight: bold; margin-top: 5px;">
+                    <small id="negativeError"
+                        style="color: #c62828; display: none; font-weight: bold; margin-top: 5px;">
                         <i class="fas fa-exclamation-circle"></i> Invalid number: Amount cannot be negative!
                     </small>
-                    <small style="display: block; margin-top: 5px; color: #888;">Max Allocatable: RM <span id="maxLimitDisplay"></span></small>
+                    <small style="display: block; margin-top: 5px; color: #888;">Max Allocatable: RM <span
+                            id="maxLimitDisplay"></span></small>
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="btn-outline" onclick="document.getElementById('allocationModal').style.display='none'" style="width: auto; padding: 10px 20px;">Cancel</button>
-                    <button type="submit" id="submitBtn" class="btn-primary" style="width: auto; padding: 10px 20px; margin: 0;">Confirm Allocation</button>
+                    <button type="button" class="btn-outline"
+                        onclick="document.getElementById('allocationModal').style.display='none'"
+                        style="width: auto; padding: 10px 20px;">Cancel</button>
+                    <button type="submit" id="submitBtn" class="btn-primary"
+                        style="width: auto; padding: 10px 20px; margin: 0;">Confirm Allocation</button>
                 </div>
             </form>
         </div>
@@ -154,10 +265,10 @@
 
             // Calculate Max Limit: Remaining Balance + The amount currently held by this grant
             let maxLimit = parseFloat(remainingBalance) + parseFloat(currentAmount);
-            document.getElementById('maxLimitDisplay').innerText = maxLimit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('maxLimitDisplay').innerText = maxLimit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             // Real-time Validation
-            document.getElementById('modalAmount').oninput = function() {
+            document.getElementById('modalAmount').oninput = function () {
                 let val = parseFloat(this.value);
                 let errorMsg = document.getElementById('budgetError');
                 let negativeMsg = document.getElementById('negativeError');
@@ -185,11 +296,12 @@
         }
 
         // Close modal if clicking outside
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             if (event.target.classList.contains('modal')) {
                 event.target.style.display = "none";
             }
         }
     </script>
 </body>
+
 </html>

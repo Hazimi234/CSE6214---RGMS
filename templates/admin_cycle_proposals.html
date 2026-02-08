@@ -15,7 +15,8 @@
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('admin.admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
+                <li><a href="{{ url_for('admin.admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a>
+                </li>
                 <li><a href="{{ url_for('admin.admin_user_management') }}"><i class="fas fa-users-cog"></i> User
                         Management</a>
                 </li>
@@ -23,7 +24,8 @@
                             class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
                 <li><a href="{{ url_for('admin.admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
                         Tracking</a></li>
-                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                <li><a href="{{ url_for('admin.admin_system_data') }}"><i class="fas fa-cog"></i> System
+                        Configuration</a>
                 </li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
@@ -77,38 +79,93 @@
                     <i class="fas fa-arrow-left" style="margin-right: 5px;"></i> Back to All Cycles
                 </a>
 
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
-                    <form method="GET" style="display: flex; gap: 15px; flex: 1;">
+                <div
+                    style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                    <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
 
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; font-size: 0.9rem;">Search Proposal Title</label>
-                            <input type="text" name="search" value="{{ request.args.get('search', '') }}"
-                                placeholder="e.g. AI in Healthcare"
-                                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                        <div style="flex: 2; min-width: 280px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Search
+                                Title</label>
+
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" name="search" value="{{ current_search }}"
+                                    placeholder="e.g. AI Research"
+                                    style="flex: 1; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+
+                                {% if current_search or current_area or (current_status and current_status != 'all') or
+                                current_sort != 'newest' %}
+                                <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id) }}"
+                                    class="btn-outline"
+                                    style="height: 38px; padding: 0 15px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #d32f2f; border-color: #d32f2f; font-weight: bold; background: white; box-sizing: border-box; white-space: nowrap;">
+                                    Clear
+                                </a>
+                                {% endif %}
+                            </div>
                         </div>
 
-                        <div style="width: 250px;">
-                            <label style="font-weight: bold; font-size: 0.9rem;">Filter Research Area</label>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Research
+                                Area</label>
                             <select name="area"
-                                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
                                 <option value="">All Areas</option>
                                 {% for area in research_areas %}
-                                <option value="{{ area.name }}" {% if request.args.get('area')==area.name %}selected{%
-                                    endif %}>{{ area.name }}</option>
+                                <option value="{{ area.name }}" {% if current_area==area.name %}selected{% endif %}>{{
+                                    area.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <button type="submit" class="btn-primary"
-                            style="width: auto; height: 42px; margin-top: 24px; padding: 0 25px;">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Status</label>
+                            <select name="status"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="all" {% if current_status=='all' %}selected{% endif %}>All Statuses
+                                </option>
+                                <option value="Submitted" {% if current_status=='Submitted' %}selected{% endif %}>
+                                    Submitted</option>
+                                <option value="Under Review" {% if current_status=='Under Review' %}selected{% endif %}>
+                                    Under Review</option>
+                                <option value="Passed Screening" {% if current_status=='Passed Screening' %}selected{%
+                                    endif %}>Passed Screening</option>
+                                <option value="Failed Screening" {% if current_status=='Failed Screening' %}selected{%
+                                    endif %}>Failed Screening</option>
+                                <option value="Pending HOD Approval" {% if current_status=='Pending HOD Approval'
+                                    %}selected{% endif %}>Pending HOD</option>
+                                <option value="Approved" {% if current_status=='Approved' %}selected{% endif %}>Approved
+                                </option>
+                                <option value="Rejected" {% if current_status=='Rejected' %}selected{% endif %}>Rejected
+                                </option>
+                            </select>
+                        </div>
 
-                        {% if request.args.get('search') or request.args.get('area') %}
-                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id) }}"
-                            class="btn-outline"
-                            style="height: 42px; margin-top: 24px; padding: 0 15px; display: flex; align-items: center;">Clear</a>
-                        {% endif %}
+                        <div style="flex: 1; min-width: 150px;">
+                            <label
+                                style="font-weight: bold; font-size: 0.85rem; color: #555; display: block; margin-bottom: 5px;">Sort
+                                By</label>
+                            <select name="sort"
+                                style="width: 100%; height: 38px; padding: 0 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;">
+                                <option value="newest" {% if current_sort=='newest' %}selected{% endif %}>Newest First
+                                </option>
+                                <option value="oldest" {% if current_sort=='oldest' %}selected{% endif %}>Oldest First
+                                </option>
+                                <option value="title_asc" {% if current_sort=='title_asc' %}selected{% endif %}>Title
+                                    (A-Z)</option>
+                                <option value="status_asc" {% if current_sort=='status_asc' %}selected{% endif %}>Status
+                                    (A-Z)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; align-items: center;">
+                            <button type="submit" class="btn-primary"
+                                style="height: 38px; padding: 0 20px; display: flex; align-items: center; justify-content: center; gap: 5px; border: none; cursor: pointer; box-sizing: border-box;">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                        </div>
+
                     </form>
                 </div>
 
@@ -121,7 +178,6 @@
                                 <th style="padding: 15px; width:15%; text-align: left;">Researcher</th>
                                 <th style="padding: 15px; width:15%; text-align: left;">Research Area</th>
                                 <th style="padding: 15px; width:15%; text-align: center;">Status</th>
-
                                 <th style="padding: 15px; width:15%; text-align: center;">Action</th>
                             </tr>
                         </thead>
@@ -134,7 +190,7 @@
                                 <td style="padding: 15px;">{{ prop.research_area }}</td>
                                 <td style="padding: 15px; text-align: center;">
                                     <span style="
-                                    padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
+                                    padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; white-space: nowrap;
                                     {% if prop.status == 'Approved' %}background:#c8e6c9; color:#2e7d32;
                                     {% elif prop.status == 'Rejected' %}background:#ffcdd2; color:#c62828;
                                     {% elif prop.status == 'Under Review' %}background:#fff3e0; color:#ef6c00;
@@ -170,7 +226,7 @@
                     <div
                         style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
                         {% if pagination.has_prev %}
-                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=pagination.prev_num, search=request.args.get('search', ''), area=request.args.get('area', '')) }}"
+                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=pagination.prev_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo;
                             Prev</a>
                         {% endif %}
@@ -183,7 +239,7 @@
                             style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{
                             page_num }}</span>
                         {% else %}
-                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=page_num, search=request.args.get('search', ''), area=request.args.get('area', '')) }}"
+                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=page_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num
                             }}</a>
                         {% endif %}
@@ -193,7 +249,7 @@
                         {% endfor %}
 
                         {% if pagination.has_next %}
-                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=pagination.next_num, search=request.args.get('search', ''), area=request.args.get('area', '')) }}"
+                        <a href="{{ url_for('admin.admin_view_cycle_proposals', cycle_id=cycle.cycle_id, page=pagination.next_num, search=current_search, area=current_area, status=current_status, sort=current_sort) }}"
                             class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next
                             &raquo;</a>
                         {% endif %}
