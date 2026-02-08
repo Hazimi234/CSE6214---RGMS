@@ -177,12 +177,12 @@
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #e8f5e9; color: #1b5e20;">
-                                <th style="padding: 15px; width:5%; text-align: left;">ID</th>
-                                <th style="padding: 15px; width:35%; text-align: left;">Title</th>
-                                <th style="padding: 15px; width:15%; text-align: left;">Researcher</th>
-                                <th style="padding: 15px; width:15%; text-align: left;">Research Area</th>
-                                <th style="padding: 15px; width:15%; text-align: center;">Status</th>
-                                <th style="padding: 15px; width:15%; text-align: center;">Action</th>
+                                <th style="padding: 15px; text-align: left;">ID</th>
+                                <th style="padding: 15px; text-align: left;">Title</th>
+                                <th style="padding: 15px; text-align: left;">Researcher</th>
+                                <th style="padding: 15px; text-align: left;">Research Area</th>
+                                <th style="padding: 15px; text-align: center;">Status</th>
+                                <th style="padding: 15px; text-align: center;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -227,13 +227,13 @@
                 <div class="table-card">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="background: #f5f5f5; color: #333;">
-                                <th style="padding: 15px; width:5%; text-align: left;">ID</th>
-                                <th style="padding: 15px; width:35%; text-align: left;">Title</th>
-                                <th style="padding: 15px; width:15%; text-align: left;">Researcher</th>
-                                <th style="padding: 15px; width:15%; text-align: left;">Research Area</th>
-                                <th style="padding: 15px; width:15%; text-align: center;">Status</th>
-                                <th style="padding: 15px; width:15%; text-align: center;">Action</th>
+                            <tr style="background: #f5f5f5; color: #555;">
+                                <th style="padding: 15px; text-align: left;">ID</th>
+                                <th style="padding: 15px; text-align: left;">Title</th>
+                                <th style="padding: 15px; text-align: left;">Researcher</th>
+                                <th style="padding: 15px; text-align: left;">Research Area</th>
+                                <th style="padding: 15px; text-align: center;">Status</th>
+                                <th style="padding: 15px; text-align: center;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -248,28 +248,16 @@
                                 <td style="padding: 15px; text-align: center;">
                                     <span style="
                                             padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold;
-                                            
-                                            /* Blue for Passed Screening */
                                             {% if prop.status == 'Passed Screening' %}
                                                 background: #e3f2fd; color: #1565c0;
-                                            
-                                            /* Red for Failed */
                                             {% elif prop.status == 'Failed Screening' %}
                                                 background: #ffebee; color: #c62828;
-                                            
-                                            /* Dark Grey for COI */
                                             {% elif prop.status == 'Return for Reassignment' %}
                                                 background:#424242; color:#fff;
-
-                                            /* Purple for Pending HOD Approval */
                                             {% elif prop.status == 'Pending HOD Approval' %}
                                                 background:#d8bfd8; color:#50404d;
-
-                                            /* Green for Aproval from HOD */
                                             {% elif prop.status == 'Approved' %}
                                                 background:#e8f5e9; color:#2e7d32;    
-
-                                            /* Default Grey for others */
                                             {% else %}
                                                 background:#e0e0e0; color:#616161;
                                             {% endif %}
@@ -291,14 +279,41 @@
                             </tr>
                             {% endfor %}
                             {% else %}
-                            <tr>
-                                <td colspan="7" style="padding: 40px; text-align: center; color: #999;">
-                                    No history found matching your filters.
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td colspan="6" style="padding: 40px; text-align: center; color: #999;">
+                                        No history available.
+                                    </td>
+                                </tr>
                             {% endif %}
                         </tbody>
                     </table>
+
+                    {% if history_pagination.pages > 1 %}
+                    <div style="padding: 20px; display: flex; justify-content: center; gap: 5px; border-top: 1px solid #eee;">
+                        {% if history_pagination.has_prev %}
+                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.prev_num) }}" 
+                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">&laquo; Prev</a>
+                        {% endif %}
+
+                        {% for page_num in history_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+                            {% if page_num %}
+                                {% if page_num == history_pagination.page %}
+                                    <span class="btn-primary" style="width: auto; padding: 5px 15px; font-size: 0.9rem; cursor: default; margin-top: 0;">{{ page_num }}</span>
+                                {% else %}
+                                    <a href="{{ url_for('reviewer.reviewer_view_proposals', page=page_num) }}" 
+                                       class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">{{ page_num }}</a>
+                                {% endif %}
+                            {% else %}
+                                <span style="padding: 5px;">...</span>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if history_pagination.has_next %}
+                            <a href="{{ url_for('reviewer.reviewer_view_proposals', page=history_pagination.next_num) }}" 
+                               class="btn-outline" style="width: auto; padding: 5px 15px; font-size: 0.9rem;">Next &raquo;</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
             </div>
