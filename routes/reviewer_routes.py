@@ -1,6 +1,6 @@
 import json
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
-from models import db, User, Reviewer, Proposal, HOD, ResearchArea
+from models import Researcher, db, User, Reviewer, Proposal, HOD, ResearchArea
 from utils import (
     check_deadlines_and_notify,
     update_user_profile,
@@ -118,6 +118,15 @@ def reviewer_screen_proposal(proposal_id):
                 "Proposal Passed Screening. You may now proceed to evaluation.",
                 "success",
             )
+            if proposal.researcher:
+                msg = f"Screening Update: Your proposal '{proposal.title}' Passed Screening."
+                link = url_for("researcher.researcher_my_proposals")
+                send_notification(
+                    proposal.researcher.user_info.mmu_id,
+                    msg,
+                    link,
+                    sender_id=user.mmu_id,
+                )
         elif decision == "not_eligible":
             proposal.status = "Failed Screening"
             # Using Malaysia Date Check
@@ -252,13 +261,23 @@ def reviewer_evaluate_proposal(proposal_id):
                     f"Review Submitted (Score: {total_score}). Forwarded to HOD.",
                     "success",
                 )
-                if proposal.assigned_hod_id:
+                if proposal.assigned_hod_id and proposal.researcher:
                     hod = HOD.query.get(proposal.assigned_hod_id)
-                    if hod:
+                    researcher=Researcher.query.get(proposal.researcher_id)
+                    if hod: # Notify HOD
                         msg = f"Action Required: Proposal '{proposal.title}' passed review ({total_score}/100)."
                         link = url_for("hod.hod_dashboard")
                         send_notification(
                             hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+                        )
+                    if researcher: # Notify Researcher
+                        msg = f"Update: Your proposal '{proposal.title}' passed review ({total_score}/100) and is pending HOD approval."
+                        link = url_for("researcher.researcher_my_proposals")
+                        send_notification(
+                            researcher.user_info.mmu_id,
+                            msg,
+                            link,
+                            sender_id=user.mmu_id,
                         )
             else:
                 proposal.status = "Rejected"
