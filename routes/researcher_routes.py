@@ -141,10 +141,18 @@ def researcher_submit_form(cycle_id):
         current_status = (
             "Draft" if request.form.get("action") == "draft" else "Submitted"
         )
+
+        # --- FILE VALIDATION FIX ---
         file = request.files.get("proposal_file")
         doc_filename = None
-        if file and allowed_file(file.filename):
-            doc_filename = save_document(file)
+        
+        if file and file.filename != "":
+            if allowed_file(file.filename):
+                doc_filename = save_document(file)
+            else:
+                # STOP HERE if file is invalid (e.g., PNG)
+                flash("Error: Invalid file format. Only PDF and DOCX are allowed.", "error")
+                return redirect(request.url) # Reload page, do not save to DB
 
         if proposal:
             has_changed = any(
