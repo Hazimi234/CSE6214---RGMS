@@ -18,7 +18,8 @@
                 <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User
                         Management</a></li>
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
+                        Cycle & Proposal Management</a></li>
                 <li class="active"><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i>
                         Budget Tracking</a></li>
                 <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
@@ -63,10 +64,12 @@
 
             <div class="content-wrapper">
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{
-                    message }}</div>{% endfor %}{% endif %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
                 {% endwith %}
-
                 <div class="stats-grid">
                     <div class="stat-card" style="border-bottom-color: #4caf50;">
                         <div class="stat-info">

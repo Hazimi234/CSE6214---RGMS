@@ -59,51 +59,48 @@ bcrypt = Bcrypt(app)
 # =====================================================================
 def check_deadlines_and_notify(user):
     """
-    Checks if any assigned proposals are within 3 days of their deadline.
-    Sends a notification if one hasn't been sent already.
+    Checks if the Final Submission Deadline is approaching for Researchers.
+    (Reviewer/HOD deadline logic removed as requested).
     """
-    if user.user_role == "Reviewer":
-        reviewer = Reviewer.query.filter_by(mmu_id=user.mmu_id).first()
-        if not reviewer:
+    if user.user_role == "Researcher":
+        researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
+        if not researcher:
             return
 
-        # Find active proposals (passed screening, not yet reviewed)
-        active_proposals = Proposal.query.filter(
-            Proposal.assigned_reviewer_id == reviewer.reviewer_id,
-            Proposal.status == "Passed Screening",
-            Proposal.review_score == None,
+        # Check Active Proposals with a Final Deadline Set
+        active_proposals = Proposal.query.filter_by(
+            researcher_id=researcher.researcher_id, status="Approved"
         ).all()
 
         for prop in active_proposals:
-            # Fetch the Reviewer Deadline for this proposal
             deadline = Deadline.query.filter_by(
-                proposal_id=prop.proposal_id, deadline_type="Reviewer"
+                proposal_id=prop.proposal_id, deadline_type="Final Submission"
             ).first()
 
             if deadline and deadline.due_date:
                 days_left = (deadline.due_date - date.today()).days
+                msg = None
 
-                # Logic: Notify if due in 3 days, 1 day, or Today
-                if 0 <= days_left <= 3:
+                if days_left < 0:
+                    msg = f"URGENT: Final submission for '{prop.title}' is OVERDUE (Due: {deadline.due_date})."
+                elif 0 <= days_left <= 7:  # Notify 1 week before
+                    msg = f"Reminder: Final submission for '{prop.title}' is due in {days_left} days."
 
-                    # Construct Message
-                    if days_left == 0:
-                        msg = f"URGENT: Review for '{prop.title}' is due TODAY!"
-                    else:
-                        msg = f"Deadline Reminder: Review for '{prop.title}' is due in {days_left} days."
-
-                    # PREVENT SPAM: Check if we already sent this specific message
-                    # (This prevents a new notification every time they refresh the page)
-                    already_notified = Notification.query.filter_by(
+                if msg:
+                    # Avoid duplicate notifications
+                    if not Notification.query.filter_by(
                         recipient_id=user.mmu_id, message=msg
-                    ).first()
-
-                    if not already_notified:
-                        link = url_for(
-                            "reviewer_evaluate_proposal", proposal_id=prop.proposal_id
+                    ).first():
+                        send_notification(
+                            user.mmu_id,
+                            msg,
+                            url_for(
+                                "researcher_submit_form",
+                                cycle_id=prop.cycle_id,
+                                proposal_id=prop.proposal_id,
+                            ),
+                            "System",
                         )
-                        # We use 'System' or a generic Admin ID as sender
-                        send_notification(user.mmu_id, msg, link, sender_id="System")
 
 
 # ========================================================================
@@ -549,9 +546,8 @@ def admin_proposal_management():
     search_query = request.args.get("search", "")
     filter_faculty = request.args.get("faculty", "")
 
-    # Pagination Setup
     page = request.args.get("page", 1, type=int)
-    per_page = 6  # Show 6 cycles per page
+    per_page = 6 
 
     query = GrantCycle.query
 
@@ -560,18 +556,19 @@ def admin_proposal_management():
     if filter_faculty:
         query = query.filter(GrantCycle.faculty == filter_faculty)
 
-    # Use .paginate() instead of .all()
     pagination = query.order_by(GrantCycle.start_date.desc()).paginate(
         page=page, per_page=per_page, error_out=False
     )
     cycles = pagination.items
 
+    # --- PASS 'today' TO THE TEMPLATE ---
     return render_template(
         "admin_proposal_management.html",
         cycles=cycles,
-        pagination=pagination,  # Pass pagination object
+        pagination=pagination,
         user=User.query.get(session["user_id"]),
         faculties=Faculty.query.all(),
+        today=date.today()  # <--- ADD THIS LINE
     )
 
 
@@ -689,63 +686,29 @@ def admin_assign_evaluators(proposal_id):
         if reviewer_id:
             proposal.assigned_reviewer_id = reviewer_id
 
-            # --- NEW: NOTIFY REVIEWER ---
+            # Notify Reviewer
             reviewer_user = Reviewer.query.get(reviewer_id).user_info
-            msg = (
-                f"New Assignment: You have been assigned to screen '{proposal.title}'."
-            )
-            link = url_for("reviewer_view_proposals")
             send_notification(
-                reviewer_user.mmu_id, msg, link, sender_id=session["user_id"]
+                reviewer_user.mmu_id,
+                f"Assignment: Screen '{proposal.title}'",
+                url_for("reviewer_view_proposals"),
+                session["user_id"],
             )
-            # -----------------------------
 
         # 2. Assign HOD
         hod_id = request.form.get("hod_id")
         if hod_id:
             proposal.assigned_hod_id = hod_id
-
-            # --- NEW: NOTIFY HOD ---
-            hod_user = HOD.query.get(hod_id).user_info
-            msg = (
-                f"New Assignment: You have been assigned to approve '{proposal.title}'."
-            )
-            link = url_for("hod_dashboard")  # Or hod proposal list
-            send_notification(hod_user.mmu_id, msg, link, sender_id=session["user_id"])
-            # -----------------------------
-
-        # 3. Set Deadlines (Keep existing code)
-        rev_date = request.form.get("reviewer_deadline")
-        hod_date = request.form.get("hod_deadline")
-
-        if rev_date:
-            dl = Deadline.query.filter_by(
-                proposal_id=proposal.proposal_id, deadline_type="Reviewer"
-            ).first()
-            if not dl:
-                dl = Deadline(
-                    proposal_id=proposal.proposal_id, deadline_type="Reviewer"
-                )
-            dl.due_date = datetime.strptime(rev_date, "%Y-%m-%d").date()
-            db.session.add(dl)
-
-        if hod_date:
-            dl = Deadline.query.filter_by(
-                proposal_id=proposal.proposal_id, deadline_type="HOD"
-            ).first()
-            if not dl:
-                dl = Deadline(proposal_id=proposal.proposal_id, deadline_type="HOD")
-            dl.due_date = datetime.strptime(hod_date, "%Y-%m-%d").date()
-            db.session.add(dl)
+            # HOD is usually notified only after Reviewer passes, but can be notified here if preferred.
 
         proposal.status = "Under Review"
         db.session.commit()
-        flash("Evaluators assigned and notified successfully.", "success")
+        flash("Evaluators assigned successfully.", "success")
         return redirect(
             url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
         )
 
-    # GET Logic (Keep existing)
+    # GET Logic
     reviewers = (
         Reviewer.query.join(User).filter(User.faculty == researcher_faculty).all()
     )
@@ -760,33 +723,56 @@ def admin_assign_evaluators(proposal_id):
     )
 
 
-@app.route("/admin/proposals/final_deadline/<int:proposal_id>", methods=["POST"])
+@app.route("/admin/proposals/final_deadline/<int:proposal_id>", methods=["GET", "POST"])
 def admin_set_final_deadline(proposal_id):
     if session.get("role") != "Admin":
         return redirect(url_for("admin_login"))
+
     proposal = Proposal.query.get_or_404(proposal_id)
 
-    if not proposal.assigned_reviewer_id or not proposal.assigned_hod_id:
-        flash("Error: Assign Evaluators first.", "error")
-        return redirect(
-            url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+    # LOCK: Ensure Proposal is Approved before setting deadline
+    if proposal.status != "Approved":
+        flash(
+            "Action Locked: You cannot set a final deadline until the HOD approves the grant.",
+            "error",
         )
+        return redirect(url_for("admin_view_proposal", proposal_id=proposal_id))
 
-    final_date = request.form["final_deadline"]
-    if final_date:
-        dl = Deadline.query.filter_by(
-            proposal_id=proposal.proposal_id, deadline_type="Final Submission"
-        ).first()
-        if not dl:
-            dl = Deadline(
+    if request.method == "POST":
+        final_date = request.form.get("final_deadline")
+        if final_date:
+            dl = Deadline.query.filter_by(
                 proposal_id=proposal.proposal_id, deadline_type="Final Submission"
-            )
-        dl.due_date = datetime.strptime(final_date, "%Y-%m-%d").date()
-        db.session.add(dl)
-        db.session.commit()
-        flash("Final Deadline Set!", "success")
+            ).first()
+            if not dl:
+                dl = Deadline(
+                    proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+                )
 
-    return redirect(url_for("admin_view_proposal", proposal_id=proposal.proposal_id))
+            dl.due_date = datetime.strptime(final_date, "%Y-%m-%d").date()
+            db.session.add(dl)
+            db.session.commit()
+
+            # Notify Researcher
+            msg = f"Project Update: Final submission deadline set for '{proposal.title}' to {final_date}."
+            link = url_for("researcher_my_proposals")
+            send_notification(
+                proposal.researcher.user_info.mmu_id,
+                msg,
+                link,
+                sender_id=session["user_id"],
+            )
+
+            flash("Final Submission Deadline Set!", "success")
+            return redirect(
+                url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+            )
+
+    return render_template(
+        "admin_set_final_deadline.html",
+        proposal=proposal,
+        user=User.query.get(session["user_id"]),
+    )
 
 
 # ------------ Budget Tracking ----------------- #
@@ -957,23 +943,37 @@ def researcher_login():
 def researcher_dashboard():
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    user= User.query.get(session["user_id"])
+    user = User.query.get(session["user_id"])
     researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
-    approved_count = Proposal.query.filter_by(researcher_id=researcher.researcher_id, status="Approved").count()
-    stats = {"my_proposals": Proposal.query.filter_by(researcher_id=researcher.researcher_id).count(),
-            "approved": approved_count,
-            "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id == researcher.researcher_id).count(),
-            "unread_notifs": Notification.query.filter_by(recipient_id=user.mmu_id, is_read=False).count()}
-    
-    recent_proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id)\
-                                     .order_by(Proposal.submission_date.desc()).limit(3).all()
+    approved_count = Proposal.query.filter_by(
+        researcher_id=researcher.researcher_id, status="Approved"
+    ).count()
+    stats = {
+        "my_proposals": Proposal.query.filter_by(
+            researcher_id=researcher.researcher_id
+        ).count(),
+        "approved": approved_count,
+        "active_grants": Grant.query.join(Proposal)
+        .filter(Proposal.researcher_id == researcher.researcher_id)
+        .count(),
+        "unread_notifs": Notification.query.filter_by(
+            recipient_id=user.mmu_id, is_read=False
+        ).count(),
+    }
+
+    recent_proposals = (
+        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+        .order_by(Proposal.submission_date.desc())
+        .limit(3)
+        .all()
+    )
 
     return render_template(
         "researcher_dashboard.html",
         stats=stats,
         user=user,
         researcher=researcher,
-        recent_proposals=recent_proposals
+        recent_proposals=recent_proposals,
     )
 
 
@@ -1015,44 +1015,53 @@ def researcher_apply_list():
 def researcher_submit_form(cycle_id):
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    
+
     cycle = GrantCycle.query.get_or_404(cycle_id)
     user = User.query.get(session["user_id"])
     researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).first()
 
-    # Eligibility Check
+    # 1. Eligibility Check
     if user.faculty != cycle.faculty:
         flash(f"Access Denied: Ineligible for {cycle.faculty} grants.", "error")
         return redirect(url_for("researcher_apply_list"))
 
-    # GET Request: Check if we are resuming an existing draft
-    proposal_id = request.args.get("proposal_id")
+    # 2. Cycle Deadline Check (Application Phase)
+    # If cycle is closed, you can only VIEW existing proposals, not edit/submit new ones
+    cycle_closed = cycle.end_date < date.today() or not cycle.is_open
+
+    # Check for existing proposal
+    proposal_id = request.args.get("proposal_id") or request.form.get("proposal_id")
     proposal = Proposal.query.get(proposal_id) if proposal_id else None
 
     if request.method == "POST":
-        proposal_id = request.form.get("proposal_id")
-        action = request.form.get("action")
-        current_status = "Draft" if action == "draft" else "Submitted"
-        
+        if cycle_closed:
+            flash(
+                "Error: This grant cycle is closed. New submissions are no longer accepted.",
+                "error",
+            )
+            return redirect(url_for("researcher_apply_list"))
+
+        current_status = (
+            "Draft" if request.form.get("action") == "draft" else "Submitted"
+        )
         file = request.files.get("proposal_file")
         doc_filename = None
-        
-        # 1. File Upload Processing
+
         if file and allowed_file(file.filename):
             doc_filename = save_document(file)
-        
-        # 2. Preparation for Versioning: Track current values before update
-        if proposal_id:
-            proposal = Proposal.query.get(proposal_id)
-            # Detect changes for the audit trail
-            has_changed = any([
-                doc_filename is not None,
-                proposal.title != request.form.get("title"),
-                proposal.research_area != request.form.get("research_area"),
-                proposal.requested_budget != float(request.form.get("budget", 0))
-            ])
-            
-            # Update existing fields
+
+        # --- Create or Update Proposal ---
+        if proposal:
+            # Audit Trail Logic (Detect Changes)
+            has_changed = any(
+                [
+                    doc_filename is not None,
+                    proposal.title != request.form.get("title"),
+                    proposal.research_area != request.form.get("research_area"),
+                    proposal.requested_budget != float(request.form.get("budget", 0)),
+                ]
+            )
+
             proposal.title = request.form.get("title")
             proposal.research_area = request.form.get("research_area")
             proposal.requested_budget = float(request.form.get("budget", 0))
@@ -1060,8 +1069,7 @@ def researcher_submit_form(cycle_id):
             if doc_filename:
                 proposal.document_file = doc_filename
         else:
-            # New Proposal Creation
-            has_changed = True # First time is always a change
+            has_changed = True
             proposal = Proposal(
                 title=request.form.get("title"),
                 research_area=request.form.get("research_area"),
@@ -1069,53 +1077,60 @@ def researcher_submit_form(cycle_id):
                 status=current_status,
                 researcher_id=researcher.researcher_id,
                 cycle_id=cycle.cycle_id,
-                document_file=doc_filename
+                document_file=doc_filename,
             )
             db.session.add(proposal)
-        
-        # Ensure we have a proposal_id for the versioning table
-        db.session.flush() 
 
-        # 3. Versioning Logic (Document Version Control)
+        db.session.flush()  # Get ID for versioning
+
+        # --- Version Control (DVC) ---
         if has_changed:
-            version_count = ProposalVersion.query.filter_by(proposal_id=proposal.proposal_id).count()
-            
-            # Smart Note Logic
-            if version_count == 0:
-                note = "Initial submission" if (current_status == "Submitted") else "Initial draft"
-            elif doc_filename:
-                note = f"Updated document ({current_status.lower()})"
-            else:
-                note = "Updated proposal details (Title/Budget)"
+            version_count = ProposalVersion.query.filter_by(
+                proposal_id=proposal.proposal_id
+            ).count()
+            note = (
+                "Initial submission"
+                if (version_count == 0 and current_status == "Submitted")
+                else "Updated proposal"
+            )
 
             new_version = ProposalVersion(
                 proposal_id=proposal.proposal_id,
                 version_number=version_count + 1,
-                document_file=proposal.document_file, # Uses existing file if no new upload
+                document_file=proposal.document_file,
                 upload_date=datetime.now(),
                 title_snapshot=proposal.title,
                 research_area_snapshot=proposal.research_area,
                 budget_snapshot=proposal.requested_budget,
-                version_note=note
+                version_note=note,
             )
             db.session.add(new_version)
 
         db.session.commit()
 
-        # 4. Notifications
+        # Notify Admin on Submission
         if current_status == "Submitted":
             admin = User.query.filter_by(user_role="Admin").first()
             if admin:
-                msg = f"Proposal Submitted: '{proposal.title}' by {user.name}."
-                link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
-                send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
+                msg = f"New Proposal: '{proposal.title}' by {user.name}."
+                send_notification(
+                    admin.mmu_id,
+                    msg,
+                    url_for("admin_view_proposal", proposal_id=proposal.proposal_id),
+                    session["user_id"],
+                )
 
         flash(f"Proposal {current_status.lower()}ed successfully!", "success")
         return redirect(url_for("researcher_my_proposals"))
 
-    return render_template("researcher_submit_form.html", 
-                           cycle=cycle, user=user, proposal=proposal,
-                           research_areas=ResearchArea.query.all())
+    return render_template(
+        "researcher_submit_form.html",
+        cycle=cycle,
+        user=user,
+        proposal=proposal,
+        research_areas=ResearchArea.query.all(),
+        cycle_closed=cycle_closed,
+    )  # Pass flag to disable inputs in HTML if needed
 
 
 # 1. Update the path to include BOTH IDs
@@ -1132,7 +1147,9 @@ def researcher_revert_proposal(proposal_id, version_id):
     proposal.requested_budget = v.budget_snapshot
 
     # Create new audit version
-    new_v_num = ProposalVersion.query.filter_by(proposal_id=proposal.proposal_id).count() + 1
+    new_v_num = (
+        ProposalVersion.query.filter_by(proposal_id=proposal.proposal_id).count() + 1
+    )
     revert_log = ProposalVersion(
         proposal_id=proposal.proposal_id,
         version_number=new_v_num,
@@ -1141,48 +1158,70 @@ def researcher_revert_proposal(proposal_id, version_id):
         research_area_snapshot=v.research_area_snapshot,
         budget_snapshot=v.budget_snapshot,
         version_note=f"Reverted to Version {v.version_number}",
-        upload_date=datetime.now()  
+        upload_date=datetime.now(),
     )
-    
+
     db.session.add(revert_log)
     db.session.commit()
-    
+
     flash(f"Reverted to Version {v.version_number}", "success")
-    return redirect(url_for('researcher_submit_form', cycle_id=proposal.cycle_id, proposal_id=proposal.proposal_id))
+    return redirect(
+        url_for(
+            "researcher_submit_form",
+            cycle_id=proposal.cycle_id,
+            proposal_id=proposal.proposal_id,
+        )
+    )
+
 
 @app.route("/researcher/proposal_status")
 def researcher_my_proposals():
     # Access Control: Ensure only Researchers can access this domain
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    
+
     # Data Retrieval: Get the User and link to their specific Researcher ID
     user = User.query.get(session["user_id"])
-    researcher = Researcher.query.filter_by(mmu_id=user.mmu_id).order_by(Researcher.researcher_id.desc()).first()
-    
+    researcher = (
+        Researcher.query.filter_by(mmu_id=user.mmu_id)
+        .order_by(Researcher.researcher_id.desc())
+        .first()
+    )
+
     if not researcher:
         flash("Error: Researcher profile not found.", "error")
         return redirect(url_for("researcher_dashboard"))
 
-    stats={
-        "my_proposals": Proposal.query.filter_by(researcher_id=researcher.researcher_id).count(),
-        "active_grants": Grant.query.join(Proposal).filter(Proposal.researcher_id==researcher.researcher_id).count(),
-        "pending_reports": 0  # Placeholder for future implementation
+    stats = {
+        "my_proposals": Proposal.query.filter_by(
+            researcher_id=researcher.researcher_id
+        ).count(),
+        "active_grants": Grant.query.join(Proposal)
+        .filter(Proposal.researcher_id == researcher.researcher_id)
+        .count(),
+        "pending_reports": 0,  # Placeholder for future implementation
     }
 
     # Fetch all proposals for this researcher, newest first
-    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id).order_by(Proposal.proposal_id).all()
-    
-    return render_template("researcher_my_proposals.html", proposals=proposals, user=user, stats=stats)
+    proposals = (
+        Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+        .order_by(Proposal.proposal_id)
+        .all()
+    )
+
+    return render_template(
+        "researcher_my_proposals.html", proposals=proposals, user=user, stats=stats
+    )
+
 
 @app.route("/researcher/withdraw/<int:proposal_id>", methods=["POST"])
 def researcher_withdraw_proposal(proposal_id):
     if session.get("role") != "Researcher":
         return redirect(url_for("researcher_login"))
-    
+
     proposal = Proposal.query.get_or_404(proposal_id)
-    user=User.query.get(session["user_id"])
-   
+    user = User.query.get(session["user_id"])
+
     # Withdraw the proposal
     proposal.status = "Withdrawn"
     db.session.commit()
@@ -1192,37 +1231,106 @@ def researcher_withdraw_proposal(proposal_id):
     if admin:
         msg = f"Proposal Withdrawn: '{proposal.title}' by {user.name}."
         link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
-        send_notification(recipient_id=admin.mmu_id, message=msg, link=link, sender_id=user.mmu_id) #send notification to admin 
+        send_notification(
+            recipient_id=admin.mmu_id, message=msg, link=link, sender_id=user.mmu_id
+        )  # send notification to admin
 
     flash("Proposal withdrawn successfully.", "success")
     return redirect(url_for("researcher_my_proposals"))
 
-@app.route("/researcher/update_progress/<int:proposal_id>", methods=["GET","POST"])
+
+@app.route("/researcher/update_progress/<int:proposal_id>", methods=["GET", "POST"])
 def researcher_update_progress(proposal_id):
-    proposal=Proposal.query.get_or_404(proposal_id)
-    user=User.query.get(session["user_id"])
-    if request.method=="POST":
-        file=request.files.get("report_file")
-        report_title=request.form["report_title"]
-        financial_usage=request.form.get("financial_usage")
-        content=request.form.get("description")
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    user = User.query.get(session["user_id"])
+
+    # 1. CHECK FINAL DEADLINE (The "Lock")
+    final_deadline = Deadline.query.filter_by(
+        proposal_id=proposal.proposal_id, deadline_type="Final Submission"
+    ).first()
+    deadline_passed = False
+
+    if final_deadline and final_deadline.due_date < date.today():
+        deadline_passed = True  # Lock the form
+
+    if request.method == "POST":
+        # BLOCK submission if deadline passed
+        if deadline_passed:
+            flash(
+                f"Error: The deadline ({final_deadline.due_date}) has passed. You cannot submit reports.",
+                "error",
+            )
+            return redirect(
+                url_for("researcher_update_progress", proposal_id=proposal.proposal_id)
+            )
+
+        file = request.files.get("report_file")
+        report_title = request.form["report_title"]
+        financial_usage = request.form.get("financial_usage")
+        content = request.form.get("description")
+
         if file and allowed_file(file.filename):
-            filename=save_document(file)
-            new_report=ProgressReport(
+            filename = save_document(file)
+            new_report = ProgressReport(
                 proposal_id=proposal.proposal_id,
                 title=report_title,
                 document_file=filename,
                 content=content,
                 financial_usage=float(financial_usage) if financial_usage else 0.0,
-                submission_date=datetime.now()
+                submission_date=datetime.now(),
+                status="Submitted",
             )
             db.session.add(new_report)
             db.session.commit()
-            flash("Progress report submitted successfully.","success")
+
+            # Notify HOD
+            if proposal.assigned_hod_id:
+                hod = HOD.query.get(proposal.assigned_hod_id)
+                msg = f"New Progress Report: '{report_title}' for project '{proposal.title}'."
+                link = url_for(
+                    "hod_view_progress_reports", proposal_id=proposal.proposal_id
+                )
+                send_notification(
+                    hod.user_info.mmu_id, msg, link, sender_id=user.mmu_id
+                )
+
+            flash("Progress report submitted successfully.", "success")
             return redirect(url_for("researcher_my_proposals"))
         else:
-            flash("Error: Valid report file required.","error")
-    return render_template("researcher_update_progress.html",proposal=proposal,user=user)
+            flash("Error: Valid report file (PDF/DOCX) is required.", "error")
+
+    return render_template(
+        "researcher_update_progress.html",
+        proposal=proposal,
+        user=user,
+        deadline_passed=deadline_passed,  # Use this to show "Request Extension" button
+        final_deadline=final_deadline,
+    )
+
+
+@app.route("/researcher/request_extension/<int:proposal_id>", methods=["POST"])
+def researcher_request_extension(proposal_id):
+    if session.get("role") != "Researcher":
+        return redirect(url_for("researcher_login"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    reason = request.form.get("extension_reason")
+    user = User.query.get(session["user_id"])
+
+    # Notify Admin
+    admin = User.query.filter_by(user_role="Admin").first()
+    if admin:
+        msg = f"Extension Request: {user.name} requests time for '{proposal.title}'. Reason: {reason}"
+        # Direct Admin to the view proposal page so they can change the date
+        link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+
+        send_notification(admin.mmu_id, msg, link, sender_id=session["user_id"])
+
+    flash("Extension request sent to Admin successfully.", "success")
+    return redirect(url_for("researcher_my_proposals"))
 
 
 # =====================================================================
@@ -1653,14 +1761,18 @@ def hod_assigned_proposals():
         return redirect(url_for("hod_login"))
 
     current_hod = HOD.query.filter_by(mmu_id=session["user_id"]).first()
-    
+
     # Filter and pagination
     search_query = request.args.get("search", "")
     filter_faculty = request.args.get("faculty", "")
     page = request.args.get("page", 1, type=int)
     per_page = 8
 
-    query = Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id).join(Researcher).join(User)
+    query = (
+        Proposal.query.filter_by(assigned_hod_id=current_hod.hod_id)
+        .join(Researcher)
+        .join(User)
+    )
 
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
@@ -1676,6 +1788,7 @@ def hod_assigned_proposals():
         user=User.query.get(session["user_id"]),
         faculties=Faculty.query.all(),
     )
+
 
 @app.route("/hod/proposals/view/<int:proposal_id>")
 def hod_view_proposal(proposal_id):
@@ -1705,6 +1818,7 @@ def hod_view_proposal(proposal_id):
         final_deadline=deadlines["Final"],
     )
 
+
 @app.route("/hod/proposals/decision/<int:proposal_id>", methods=["POST"])
 def hod_proposal_decision(proposal_id):
     if session.get("role") != "HOD":
@@ -1716,44 +1830,63 @@ def hod_proposal_decision(proposal_id):
     # Security: Ensure HOD is assigned
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
     if not current_hod or proposal.assigned_hod_id != current_hod.hod_id:
-        flash("Error: You are not authorized to make decisions on this proposal.", "error")
+        flash(
+            "Error: You are not authorized to make decisions on this proposal.", "error"
+        )
         return redirect(url_for("hod_assigned_proposals"))
 
     decision = request.form.get("decision")
 
     if decision == "approve":
         proposal.status = "Pending Grant"
-        
-        # Create Grant Record (Award Funding)
+
+        # Create Grant Record
         if not Grant.query.filter_by(proposal_id=proposal.proposal_id).first():
             new_grant = Grant(
-                grant_amount=proposal.requested_budget,
-                proposal_id=proposal.proposal_id
+                grant_amount=proposal.requested_budget, proposal_id=proposal.proposal_id
             )
             db.session.add(new_grant)
-        
-        flash(f"Proposal '{proposal.title}' Approved! You may allocate the grant amount now to finish the approval process.", "success")
+
+        flash(
+            f"Proposal '{proposal.title}' Approved! You may allocate the grant amount now to finish the approval process.",
+            "success",
+        )
 
     elif decision == "reject":
         proposal.status = "Rejected"
         flash(f"Proposal '{proposal.title}' Rejected.", "error")
-        send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been REJECTED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
+
+        # 1. Notify Researcher
+        send_notification(
+            proposal.researcher.user_info.mmu_id,
+            f"Update: Your proposal '{proposal.title}' has been REJECTED.",
+            url_for("researcher_my_proposals"),
+            sender_id=user.mmu_id,
+        )
+
+        # 2. NEW: Notify Admin (For Info)
+        admin = User.query.filter_by(user_role="Admin").first()
+        if admin:
+            msg = f"Update: Proposal '{proposal.title}' was REJECTED by the HOD."
+            link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+            send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
 
     db.session.commit()
     return redirect(url_for("hod_view_proposal", proposal_id=proposal.proposal_id))
+
 
 @app.route("/hod/grant_allocation")
 def hod_grant_allocation():
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-    
+
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
 
     # Fetch proposals: Pending Grant or Approved, assigned to this HOD
     proposals = Proposal.query.filter(
         Proposal.assigned_hod_id == current_hod.hod_id,
-        Proposal.status.in_(["Pending Grant", "Approved"])
+        Proposal.status.in_(["Pending Grant", "Approved"]),
     ).all()
 
     # Calculate Budget Info
@@ -1765,8 +1898,9 @@ def hod_grant_allocation():
         "hod_grant_allocation.html",
         proposals=proposals,
         user=user,
-        remaining_balance=remaining_balance
+        remaining_balance=remaining_balance,
     )
+
 
 @app.route("/hod/grant_allocation/update", methods=["POST"])
 def hod_update_grant():
@@ -1775,7 +1909,7 @@ def hod_update_grant():
 
     proposal_id = request.form.get("proposal_id")
     new_amount = float(request.form.get("amount"))
-    
+
     if new_amount < 0:
         flash("Error: Grant amount cannot be negative.", "error")
         return redirect(url_for("hod_grant_allocation"))
@@ -1788,21 +1922,39 @@ def hod_update_grant():
         flash("Error: Grant record not found.", "error")
         return redirect(url_for("hod_grant_allocation"))
 
-    # Update
+    # Update Amount
     grant.grant_amount = new_amount
+
+    # Finalize Status to "Approved"
     if proposal.status == "Pending Grant":
         proposal.status = "Approved"
 
     db.session.commit()
     flash(f"Grant allocated successfully: RM {new_amount:,.2f}", "success")
-    send_notification(proposal.researcher.user_info.mmu_id, f"Update: Your proposal '{proposal.title}' has been APPROVED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
+
+    # 1. Notify Researcher
+    send_notification(
+        proposal.researcher.user_info.mmu_id,
+        f"Update: Your proposal '{proposal.title}' has been APPROVED.",
+        url_for("researcher_my_proposals"),
+        sender_id=user.mmu_id,
+    )
+
+    # 2. NEW: Notify Admin (Action Trigger)
+    admin = User.query.filter_by(user_role="Admin").first()
+    if admin:
+        msg = f"Action Required: Proposal '{proposal.title}' is fully APPROVED. Please set the Final Deadline."
+        link = url_for("admin_view_proposal", proposal_id=proposal.proposal_id)
+        send_notification(admin.mmu_id, msg, link, sender_id=user.mmu_id)
+
     return redirect(url_for("hod_grant_allocation"))
+
 
 @app.route("/hod/grant_budget")
 def hod_grant_budget():
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-    
+
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
 
@@ -1818,8 +1970,10 @@ def hod_grant_budget():
     per_page = 8
 
     # Query: Assigned to HOD + Has Grant Awarded
-    query = Proposal.query.join(Grant).filter(Proposal.assigned_hod_id == current_hod.hod_id)
-    query = query.join(Researcher).join(User) # Join for faculty filtering
+    query = Proposal.query.join(Grant).filter(
+        Proposal.assigned_hod_id == current_hod.hod_id
+    )
+    query = query.join(Researcher).join(User)  # Join for faculty filtering
 
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
@@ -1831,15 +1985,22 @@ def hod_grant_budget():
     # Calculate financial usage per proposal
     proposal_data = []
     for p in pagination.items:
-        spent = db.session.query(func.sum(ProgressReport.financial_usage)).filter_by(proposal_id=p.proposal_id).scalar() or 0.0
+        spent = (
+            db.session.query(func.sum(ProgressReport.financial_usage))
+            .filter_by(proposal_id=p.proposal_id)
+            .scalar()
+            or 0.0
+        )
         grant_amount = p.grant_award.grant_amount
-        proposal_data.append({
-            'proposal': p,
-            'spent': spent,
-            'grant_amount': grant_amount,
-            'balance': grant_amount - spent,
-            'utilization': (spent / grant_amount * 100) if grant_amount > 0 else 0
-        })
+        proposal_data.append(
+            {
+                "proposal": p,
+                "spent": spent,
+                "grant_amount": grant_amount,
+                "balance": grant_amount - spent,
+                "utilization": (spent / grant_amount * 100) if grant_amount > 0 else 0,
+            }
+        )
 
     return render_template(
         "hod_grant_budget.html",
@@ -1849,14 +2010,15 @@ def hod_grant_budget():
         current_balance=remaining_balance,
         proposal_data=proposal_data,
         pagination=pagination,
-        faculties=Faculty.query.all()
+        faculties=Faculty.query.all(),
     )
+
 
 @app.route("/hod/assigned_research")
 def hod_assigned_research():
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-    
+
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
 
@@ -1866,20 +2028,31 @@ def hod_assigned_research():
     filter_faculty = request.args.get("faculty", "")
     per_page = 8
 
-    query = Proposal.query.filter(
-        Proposal.assigned_hod_id == current_hod.hod_id,
-        Proposal.status.in_(["Approved", "Completed", "Terminated"])
-    ).join(Researcher).join(User)
+    query = (
+        Proposal.query.filter(
+            Proposal.assigned_hod_id == current_hod.hod_id,
+            Proposal.status.in_(["Approved", "Completed", "Terminated"]),
+        )
+        .join(Researcher)
+        .join(User)
+    )
 
     if search_query:
         query = query.filter(Proposal.title.ilike(f"%{search_query}%"))
-    
+
     if filter_faculty:
         query = query.filter(User.faculty == filter_faculty)
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
-    return render_template("hod_assigned_research.html", proposals=pagination.items, pagination=pagination, user=user, faculties=Faculty.query.all())
+    return render_template(
+        "hod_assigned_research.html",
+        proposals=pagination.items,
+        pagination=pagination,
+        user=user,
+        faculties=Faculty.query.all(),
+    )
+
 
 @app.route("/hod/project/update_status", methods=["POST"])
 def hod_update_project_status():
@@ -1888,7 +2061,7 @@ def hod_update_project_status():
 
     proposal_id = request.form.get("proposal_id")
     new_status = request.form.get("status")
-    
+
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
@@ -1901,7 +2074,7 @@ def hod_update_project_status():
         proposal.status = new_status
         db.session.commit()
         flash(f"Project '{proposal.title}' status updated to {new_status}.", "success")
-    
+
     # Redirect back to the page that initiated the request
     next_page = request.form.get("next_page")
     if next_page:
@@ -1909,11 +2082,12 @@ def hod_update_project_status():
 
     return redirect(url_for("hod_assigned_research"))
 
+
 @app.route("/hod/assigned_research/progress/<int:proposal_id>")
 def hod_view_progress_reports(proposal_id):
     if session.get("role") != "HOD":
         return redirect(url_for("hod_login"))
-    
+
     proposal = Proposal.query.get_or_404(proposal_id)
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
@@ -1924,9 +2098,16 @@ def hod_view_progress_reports(proposal_id):
         return redirect(url_for("hod_assigned_research"))
 
     # Fetch reports sorted by newest first
-    reports = ProgressReport.query.filter_by(proposal_id=proposal_id).order_by(ProgressReport.submission_date.desc()).all()
+    reports = (
+        ProgressReport.query.filter_by(proposal_id=proposal_id)
+        .order_by(ProgressReport.submission_date.desc())
+        .all()
+    )
 
-    return render_template("hod_view_progress_reports.html", proposal=proposal, reports=reports, user=user)
+    return render_template(
+        "hod_view_progress_reports.html", proposal=proposal, reports=reports, user=user
+    )
+
 
 @app.route("/hod/progress_report/decision", methods=["POST"])
 def hod_progress_report_decision():
@@ -1938,7 +2119,7 @@ def hod_progress_report_decision():
     feedback = request.form.get("feedback")
 
     report = ProgressReport.query.get_or_404(report_id)
-    
+
     # Security: Check if HOD manages this proposal
     user = User.query.get(session["user_id"])
     current_hod = HOD.query.filter_by(mmu_id=user.mmu_id).first()
@@ -1952,16 +2133,29 @@ def hod_progress_report_decision():
         report.status = "Validated"
         flash("Progress report validated successfully.", "success")
         # Notify researcher
-        send_notification(report.proposal.researcher.user_info.mmu_id, f"Your progress report '{report.title}' has been VALIDATED.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
+        send_notification(
+            report.proposal.researcher.user_info.mmu_id,
+            f"Your progress report '{report.title}' has been VALIDATED.",
+            url_for("researcher_my_proposals"),
+            sender_id=user.mmu_id,
+        )
 
     elif decision == "revision":
         report.status = "Requires Revision"
         flash("Progress report returned for revision.", "info")
         # Notify researcher
-        send_notification(report.proposal.researcher.user_info.mmu_id, f"Action Required: Revision requested for report '{report.title}'.", url_for("researcher_my_proposals"), sender_id=user.mmu_id)
+        send_notification(
+            report.proposal.researcher.user_info.mmu_id,
+            f"Action Required: Revision requested for report '{report.title}'.",
+            url_for("researcher_my_proposals"),
+            sender_id=user.mmu_id,
+        )
 
     db.session.commit()
-    return redirect(url_for("hod_view_progress_reports", proposal_id=report.proposal_id))
+    return redirect(
+        url_for("hod_view_progress_reports", proposal_id=report.proposal_id)
+    )
+
 
 # ==================================================================
 #                          MAIN EXECUTION

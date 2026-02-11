@@ -127,14 +127,19 @@
             <div class="sidebar-header"><i class="fas fa-user-shield"
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
-                <li class="active"><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
+                <li class="active"><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i>
+                        Dashboard</a></li>
                 <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My
                         Account</a></li>
-                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User Management</a>
+                <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User
+                        Management</a>
                 </li>
-                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant Cycle & Proposal Management</a></li>
-                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget Tracking</a></li>
-                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a></li>
+                <li><a href="{{ url_for('admin_proposal_management') }}"><i class="fas fa-file-contract"></i> Grant
+                        Cycle & Proposal Management</a></li>
+                <li><a href="{{ url_for('admin_budget_tracking') }}"><i class="fas fa-chart-line"></i> Budget
+                        Tracking</a></li>
+                <li><a href="{{ url_for('admin_system_data') }}"><i class="fas fa-cog"></i> System Configuration</a>
+                </li>
                 <li style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </li>
@@ -174,6 +179,13 @@
             </div>
 
             <div class="content-wrapper">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
 
                 <div style="margin-bottom: 30px;">
                     <h1 style="color: #1b5e20; margin-bottom: 5px;">Welcome, {{ user.name }}!</h1>

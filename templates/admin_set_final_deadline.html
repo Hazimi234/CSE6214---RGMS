@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Assign Evaluators - GrantSysMMU</title>
+    <title>Set Final Deadline - GrantSysMMU</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -15,8 +15,7 @@
                     style="margin-right: 10px; color: var(--secondary-color);"></i> GrantSysMMU</div>
             <ul class="sidebar-menu">
                 <li><a href="{{ url_for('admin_dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a></li>
-                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My
-                        Account</a></li>
+                <li><a href="{{ url_for('admin_profile') }}"><i class="fas fa-user-circle"></i> My Account</a></li>
                 <li><a href="{{ url_for('admin_user_management') }}"><i class="fas fa-users-cog"></i> User
                         Management</a>
                 </li>
@@ -34,7 +33,7 @@
 
         <div class="main-content">
             <div class="top-bar">
-                <h2>Assign Evaluators</h2>
+                <h2>Set Project Deadline</h2>
                 <div style="display: flex; align-items: center; gap: 25px;">
 
                     <a href="{{ url_for('view_notifications') }}"
@@ -79,44 +78,28 @@
                 </a>
 
                 <div class="dash-card" style="display: block;">
-                    <h3 style="margin-top: 0; color: #1b5e20;">Select Evaluators</h3>
+                    <h3 style="margin-top: 0; color: #1b5e20;">Final Research Submission</h3>
                     <p style="color: #666; margin-bottom: 20px;">
-                        Assign a Reviewer and HOD for <strong>{{ proposal.title }}</strong>.
+                        Set the strict deadline for <strong>{{ proposal.title }}</strong>.
+                        <br>The researcher will not be able to upload their final findings after this date.
                     </p>
-                    <p>Showing evaluators from Faculty: <strong>{{ proposal.researcher.user_info.faculty }}</strong></p>
+
+                    <div
+                        style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2e7d32;">
+                        <strong>Proposal Status:</strong> <span
+                            style="color: #2e7d32; font-weight: bold;">APPROVED</span>
+                    </div>
 
                     <form method="POST">
-
-                        <div class="form-group" style="margin-bottom: 20px;">
-                            <label style="font-weight: bold;">Select Reviewer</label>
-                            <select name="reviewer_id" class="form-control" required
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Select Deadline
+                                Date</label>
+                            <input type="date" name="final_deadline" class="form-control" required
                                 style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                                <option value="">-- Choose Reviewer --</option>
-                                {% for r in reviewers %}
-                                <option value="{{ r.reviewer_id }}" {% if proposal.assigned_reviewer_id==r.reviewer_id
-                                    %}selected{% endif %}>
-                                    {{ r.user_info.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 30px;">
-                            <label style="font-weight: bold;">Select HOD</label>
-                            <select name="hod_id" class="form-control" required
-                                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
-                                <option value="">-- Choose HOD --</option>
-                                {% for h in hods %}
-                                <option value="{{ h.hod_id }}" {% if proposal.assigned_hod_id==h.hod_id %}selected{%
-                                    endif %}>
-                                    {{ h.user_info.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
                         </div>
 
                         <button type="submit" class="btn-primary" style="width: 100%;">
-                            <i class="fas fa-user-check"></i> Confirm Assignment
+                            <i class="fas fa-check-circle"></i> Confirm Deadline
                         </button>
                     </form>
                 </div>

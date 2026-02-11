@@ -92,7 +92,6 @@
                                 <th style="padding: 15px; text-align: left;">Title</th>
                                 <th style="padding: 15px; text-align: left;">Researcher</th>
                                 <th style="padding: 15px; text-align: left;">Research Area</th>
-                                <th style="padding: 15px; text-align: center;">Deadline</th> 
                                 <th style="padding: 15px; text-align: center;">Status</th>
                                 <th style="padding: 15px; text-align: center;">Action</th>
                             </tr>
@@ -105,11 +104,6 @@
                                     <td style="padding: 15px; font-weight: bold;">{{ prop.title }}</td>
                                     <td style="padding: 15px;">{{ prop.researcher.user_info.name }}</td>
                                     <td style="padding: 15px;">{{ prop.research_area }}</td>
-                                    
-                                    <td style="padding: 15px; text-align: center; color: #d32f2f; font-weight: bold;">
-                                        {% set dl = prop.deadlines|selectattr("deadline_type", "equalto", "Reviewer")|first %}
-                                        {{ dl.due_date if dl else 'N/A' }}
-                                    </td>
 
                                     <td style="padding: 15px; text-align: center;">
                                         <span style="padding: 5px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; background:#fff9c4; color:#fbc02d;">
@@ -148,7 +142,6 @@
                                 <th style="padding: 15px; text-align: left;">Title</th>
                                 <th style="padding: 15px; text-align: left;">Researcher</th>
                                 <th style="padding: 15px; text-align: left;">Research Area</th>
-                                <th style="padding: 15px; text-align: center;">Deadline</th>
                                 <th style="padding: 15px; text-align: center;">Status</th>
                                 <th style="padding: 15px; text-align: center;">Action</th>
                             </tr>
@@ -161,11 +154,6 @@
                                     <td style="padding: 15px; font-weight: bold; color: #555;">{{ prop.title }}</td>
                                     <td style="padding: 15px; color: #666;">{{ prop.researcher.user_info.name }}</td>
                                     <td style="padding: 15px; color: #666;">{{ prop.research_area }}</td>
-
-                                    <td style="padding: 15px; text-align: center; color: #888;">
-                                        {% set dl = prop.deadlines|selectattr("deadline_type", "equalto", "Reviewer")|first %}
-                                        {{ dl.due_date if dl else 'N/A' }}
-                                    </td>
 
                                     <td style="padding: 15px; text-align: center;">
                                         <span style="

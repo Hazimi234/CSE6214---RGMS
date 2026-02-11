@@ -162,52 +162,31 @@
                         </div>
 
                         <div class="section-card">
-                            <h3
-                                style="color: #1565c0; border-bottom: 2px solid #e3f2fd; padding-bottom: 10px; margin-bottom: 25px; text-align: center;">
-                                <i class="fas fa-calendar-alt"></i> Tracking
-                            </h3>
+                            <h4 style="color: #333; margin-bottom: 15px;">Project Timeline</h4>
 
-                            <ul style="list-style: none; padding: 0;">
-                                <li
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f9f9f9; padding-bottom: 10px;">
-                                    <span style="font-weight: bold; color: #555;">Reviewer Due:</span>
-                                    {% if reviewer_deadline %}
-                                    <span style="color: #c62828; font-weight: bold;">{{
-                                        reviewer_deadline.due_date.strftime('%d %b %Y') }}</span>
-                                    {% else %}
-                                    <span style="color: #ccc;">--</span>
-                                    {% endif %}
-                                </li>
+                            <div style="margin-bottom: 20px;">
+                                <span style="display: block; font-size: 0.85rem; color: #666;">Final Submission
+                                    Deadline</span>
+                                {% if final_deadline %}
+                                <strong style="color: #c62828; font-size: 1.1rem;">{{
+                                    final_deadline.due_date.strftime('%d %b %Y') }}</strong>
+                                {% else %}
+                                <span style="color: #999;">Not set</span>
+                                {% endif %}
+                            </div>
 
-                                <li
-                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f9f9f9; padding-bottom: 10px;">
-                                    <span style="font-weight: bold; color: #555;">HOD Due:</span>
-                                    {% if hod_deadline %}
-                                    <span style="color: #c62828; font-weight: bold;">{{
-                                        hod_deadline.due_date.strftime('%d %b %Y') }}</span>
-                                    {% else %}
-                                    <span style="color: #ccc;">--</span>
-                                    {% endif %}
-                                </li>
-
-                                <li style="margin-top: 15px; text-align: center;">
-                                    <div style="font-weight: bold; color: #555; margin-bottom: 8px;">Final Submission
-                                        Due</div>
-                                    {% if final_deadline %}
-                                    <div style="color: #c62828; font-weight: bold; font-size: 1.1rem;">{{
-                                        final_deadline.due_date.strftime('%d %b %Y') }}</div>
-                                    {% else %}
-                                    <form
-                                        action="{{ url_for('admin_set_final_deadline', proposal_id=proposal.proposal_id) }}"
-                                        method="POST" style="display: flex; gap: 8px;">
-                                        <input type="date" name="final_deadline" required
-                                            style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; flex: 1;">
-                                        <button type="submit" class="btn-primary"
-                                            style="width: auto; padding: 8px 20px; margin: 0;">Set</button>
-                                    </form>
-                                    {% endif %}
-                                </li>
-                            </ul>
+                            {% if proposal.status == 'Approved' %}
+                            <a href="{{ url_for('admin_set_final_deadline', proposal_id=proposal.proposal_id) }}"
+                                class="btn-primary" style="display: block; text-align: center; text-decoration: none;">
+                                <i class="fas fa-calendar-alt"></i> Set Final Deadline
+                            </a>
+                            {% else %}
+                            <div
+                                style="background: #f5f5f5; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; color: #888;">
+                                <i class="fas fa-lock"></i> Set Final Deadline<br>
+                                <small>(Locked until Approved)</small>
+                            </div>
+                            {% endif %}
                         </div>
 
                     </div>
