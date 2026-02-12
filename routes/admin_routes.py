@@ -216,7 +216,7 @@ def admin_user_management():
 @admin_bp.route("/admin/users/create", methods=["GET", "POST"])
 def admin_create_user():
     """
-    Creates a new user account (Researcher, Reviewer, HOD, Admin).
+    Creates a new user account (Researcher, Reviewer, HOD).
     Also creates the corresponding role-specific table entry (e.g., adds to 'Researcher' table).
     """
     if session.get("role") != "Admin":
@@ -246,7 +246,7 @@ def admin_create_user():
         new_user.set_password(request.form["password"])
         db.session.add(new_user)
 
-        # Create Role-Specific record (Polymorphic association manual handling)
+        # Create Role-Specific record 
         if role == "Researcher":
             db.session.add(Researcher(mmu_id=mmu_id))
         elif role == "Reviewer":
