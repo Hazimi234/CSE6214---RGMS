@@ -31,7 +31,11 @@
                     <div style="width: 1px; height: 30px; background: #ddd;"></div>
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <span style="font-weight: bold; color: #1b5e20;">{{ user.name }}</span>
-                        <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid #4caf50;">
+                        <a href="{{ url_for('hod.hod_profile') }}">
+                            <img src="{{ url_for('static', filename='profile_pics/' + user.profile_image) }}"
+                                alt="Profile"
+                                style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #4caf50; padding: 2px;">
+                        </a>
                     </div>
                 </div>
             </div>

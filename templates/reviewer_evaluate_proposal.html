@@ -13,7 +13,6 @@
             border-bottom: 1px solid #eee;
         }
 
-        /* Question Text Styling */
         .question-header {
             display: flex;
             justify-content: space-between;
@@ -28,7 +27,6 @@
             margin: 0;
         }
 
-        /* The Badge showing the score in Read-Only Mode */
         .score-badge {
             background-color: #e8f5e9;
             color: #2e7d32;
@@ -39,13 +37,11 @@
             font-size: 0.9rem;
         }
 
-        /* Radio Button Container */
         .rating-options {
             display: flex;
             gap: 15px;
         }
 
-        /* Individual Radio Label */
         .rating-option {
             display: flex;
             align-items: center;
@@ -57,19 +53,16 @@
             transition: all 0.2s;
         }
 
-        /* Hover effect for active editing */
         .rating-option:hover:not(.disabled) {
             background-color: #f1f8e9;
             border-color: #a5d6a7;
         }
 
-        /* Selected State */
         input[type="radio"]:checked+span {
             font-weight: bold;
             color: #1b5e20;
         }
 
-        /* Read Only Mode specific adjustments */
         .disabled {
             cursor: default;
             opacity: 0.8;
