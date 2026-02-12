@@ -101,6 +101,13 @@
                                 <option value="Approved" {% if current_status == 'Approved' %}selected{% endif %}>Approved</option>
                                 <option value="Rejected" {% if current_status == 'Rejected' %}selected{% endif %}>Rejected</option>
                                 <option value="Withdrawn" {% if current_status == 'Withdrawn' %}selected{% endif %}>Withdrawn</option>
+                                <option value="Passed Screening" {% if current_status == 'Passed Screening' %}selected{% endif %}>Passed Screening</option>
+                                <option value="Failed Screening" {% if current_status == 'Failed Screening' %}selected{% endif %}>Failed Screening</option>
+                                <option value="Pending HOD Approval" {% if current_status == 'Pending HOD Approval' %}selected{% endif %}>Pending HOD Approval</option>
+                                <option value="Pending Grant" {% if current_status == 'Pending Grant' %}selected{% endif %}>Pending Grant</option>
+                                <option value="Return for Reassignment" {% if current_status == 'Return for Reassignment' %}selected{% endif %}>Return for Reassignment</option>
+
+
                             </select>
                         </div>
                     
